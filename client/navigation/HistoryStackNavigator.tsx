@@ -1,0 +1,34 @@
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HistoryScreen from "@/screens/HistoryScreen";
+import { useScreenOptions } from "@/hooks/useScreenOptions";
+import { AppColors } from "@/constants/colors";
+
+export type HistoryStackParamList = {
+  History: undefined;
+};
+
+const Stack = createNativeStackNavigator<HistoryStackParamList>();
+
+export default function HistoryStackNavigator() {
+  const screenOptions = useScreenOptions();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        ...screenOptions,
+        headerBackVisible: true,
+        headerBackButtonDisplayMode: "minimal",
+        headerTintColor: AppColors.primary,
+      }}
+    >
+      <Stack.Screen
+        name="History"
+        component={HistoryScreen}
+        options={{
+          title: "History",
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
