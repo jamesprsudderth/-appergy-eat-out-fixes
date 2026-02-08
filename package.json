@@ -10,6 +10,7 @@
     "lint": "npx expo lint",
     "lint:fix": "npx expo lint --fix",
     "check:types": "tsc --noEmit",
+    "test": "vitest run",
     "format": "prettier --write \"**/*.{js,ts,tsx,css,json}\""
   },
   "dependencies": {
@@ -73,7 +74,8 @@
     "eslint-import-resolver-node": "^0.3.9",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "3.6.2",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.18"
   },
   "private": true
 }

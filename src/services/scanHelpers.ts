@@ -85,7 +85,7 @@ export function computeItemFingerprint(
     (confirmedName && confirmedName.trim()) ||
     (guessedName && guessedName.trim());
   if (!source) return null;
-  const normalized = normalizeTokens([source]).join("-");
+  const normalized = normalizeTokens(source.split(/\s+/)).join("-");
   if (!normalized) return null;
   return `fp:${normalized}`;
 }
