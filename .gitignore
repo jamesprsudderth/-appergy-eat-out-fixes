@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+static-build/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.tsbuildinfo
+build/
+
+# Test files
+testPipeline.ts
+testLiveOCR.ts
+
+# Logs
+*.log
+npm-debug.log*
+
+# Replit (no longer needed)
+.replit
+replit.nix
+.cache/

@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Appergy Firestore Security Rules
+//
+// Deploy via Firebase Console → Firestore → Rules
+// Or via CLI: firebase deploy --only firestore:rules
+//
+// Data Structure:
+//   users/{userId}                          — main profile doc
+//   users/{userId}/settings/forbiddenKeywords — keywords subdoc
+//   users/{userId}/familyProfiles/{memberId}  — family member profiles
+//   users/{userId}/savedRecipes/{recipeId}    — saved/generated recipes
+//   users/{userId}/scanHistory/{scanId}       — scan history (future)
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── User Profile ──
+    // Only the authenticated user can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // ── Settings (forbidden keywords, etc.) ──
+      match /settings/{settingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // ── Family Profiles ──
+      match /familyProfiles/{memberId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // ── Saved Recipes ──
+      match /savedRecipes/{recipeId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // ── Scan History (future) ──
+      match /scanHistory/{scanId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Block everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
