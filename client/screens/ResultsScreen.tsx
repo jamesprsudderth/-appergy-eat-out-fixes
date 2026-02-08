@@ -303,7 +303,9 @@ function ResultCard({ result }: ResultCardProps) {
           </ThemedText>
         ) : (
           <View style={styles.issuesList}>
-            {result.matchedAllergens.length > 0 ? (
+            {/* Group 1: ❌ Allergens (spec order) */}
+            {result.matchedAllergens.length > 0 ||
+            result.matchedKeywords.length > 0 ? (
               <View style={styles.issueSection}>
                 <ThemedText
                   style={[
@@ -311,12 +313,12 @@ function ResultCard({ result }: ResultCardProps) {
                     { color: AppColors.destructive },
                   ]}
                 >
-                  Allergens Found:
+                  {"\u274c"} Allergens
                 </ThemedText>
                 <View style={styles.tagsContainer}>
                   {result.matchedAllergens.map((allergen, index) => (
                     <View
-                      key={index}
+                      key={`a-${index}`}
                       style={[
                         styles.tag,
                         { backgroundColor: AppColors.destructive + "30" },
@@ -332,34 +334,14 @@ function ResultCard({ result }: ResultCardProps) {
                       </ThemedText>
                     </View>
                   ))}
-                </View>
-              </View>
-            ) : null}
-
-            {result.matchedKeywords.length > 0 ? (
-              <View style={styles.issueSection}>
-                <ThemedText
-                  style={[
-                    styles.issueSectionTitle,
-                    { color: AppColors.destructive },
-                  ]}
-                >
-                  Forbidden Keywords:
-                </ThemedText>
-                <View style={styles.tagsContainer}>
                   {result.matchedKeywords.map((keyword, index) => (
                     <View
-                      key={index}
+                      key={`k-${index}`}
                       style={[
                         styles.tag,
                         { backgroundColor: AppColors.destructive + "30" },
                       ]}
                     >
-                      <Ionicons
-                        name="ban"
-                        size={12}
-                        color={AppColors.destructive}
-                      />
                       <ThemedText
                         style={[
                           styles.tagText,
@@ -374,6 +356,7 @@ function ResultCard({ result }: ResultCardProps) {
               </View>
             ) : null}
 
+            {/* Group 2: ⛔ Preferences (spec order) */}
             {result.matchedPreferences.length > 0 ? (
               <View style={styles.issueSection}>
                 <ThemedText
@@ -382,7 +365,7 @@ function ResultCard({ result }: ResultCardProps) {
                     { color: AppColors.warning },
                   ]}
                 >
-                  Dietary Conflicts:
+                  {"\u26d4"} Preferences
                 </ThemedText>
                 <View style={styles.tagsContainer}>
                   {result.matchedPreferences.map((pref, index) => (
@@ -403,6 +386,9 @@ function ResultCard({ result }: ResultCardProps) {
                 </View>
               </View>
             ) : null}
+
+            {/* Group 3: ⚠️ Inferred risks (Not explicitly listed) */}
+            {/* Placeholder — populated when inference escalation is implemented */}
 
             <View style={styles.reasonsList}>
               {result.reasons.map((reason, index) => (
