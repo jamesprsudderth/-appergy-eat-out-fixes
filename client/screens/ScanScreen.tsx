@@ -158,7 +158,6 @@ export default function ScanScreen() {
             forbiddenKeywords,
           });
 
-          console.log("Loaded main profile:", loadedProfiles[0]);
         } else {
           // User exists but no profile data yet - create default
           loadedProfiles.push({
@@ -246,14 +245,6 @@ export default function ScanScreen() {
     setProfiles(loadedProfiles);
     setSelectedProfileIds(loadedProfiles.map((p) => p.id));
 
-    console.log(
-      "Loaded profiles:",
-      loadedProfiles.map((p) => ({
-        name: p.name,
-        allergies: p.allergies,
-        preferences: p.preferences,
-      })),
-    );
   };
 
   const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
