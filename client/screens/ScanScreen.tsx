@@ -42,6 +42,7 @@ import { db, isFirebaseConfigured } from "@/services/firebase";
 import {
   createScanSession,
   persistScanAttempt,
+  persistLatestResult,
 } from "@/services/scanSession";
 
 type ScanScreenNavigationProp = NativeStackNavigationProp<
@@ -292,7 +293,7 @@ export default function ScanScreen() {
           ? analyzeIngredientsText(ingredientText, selectedProfiles)
           : analyzeBarcodeProduct(product, selectedProfiles);
 
-      // Persist barcode scan attempt
+      // Persist barcode scan attempt and result/latest
       attemptCountRef.current += 1;
       const hasUnsafe = analysisResult.results.some(
         (r) => r.status === "unsafe",
@@ -305,6 +306,22 @@ export default function ScanScreen() {
           ocrText: ingredientText || null,
           resultStatus,
           manualReviewReason: null,
+        });
+        persistLatestResult(user.uid, sessionId, {
+          status: resultStatus,
+          manualReviewReason: null,
+          itemName: product.name || null,
+          itemFingerprint: null,
+          ingredientsExplicit: analysisResult.ingredients,
+          ingredientsInferred: [],
+          profiles: analysisResult.results.map((r) => ({
+            profileId: r.profileId,
+            name: r.name,
+            status: r.status,
+            allergens: r.matchedAllergens,
+            preferences: r.matchedPreferences,
+            inferredRisks: [],
+          })),
         });
       }
 
@@ -455,7 +472,7 @@ export default function ScanScreen() {
               result = analyzeIngredientsText(mockText, selectedProfiles);
             }
 
-            // Persist scan attempt
+            // Persist scan attempt and result/latest
             attemptCountRef.current += 1;
             const hasUnsafe = result.results.some(
               (r) => r.status === "unsafe",
@@ -468,6 +485,22 @@ export default function ScanScreen() {
                 ocrText: null,
                 resultStatus,
                 manualReviewReason: null,
+              });
+              persistLatestResult(user.uid, sessionId, {
+                status: resultStatus,
+                manualReviewReason: null,
+                itemName: null,
+                itemFingerprint: null,
+                ingredientsExplicit: result.ingredients,
+                ingredientsInferred: [],
+                profiles: result.results.map((r) => ({
+                  profileId: r.profileId,
+                  name: r.name,
+                  status: r.status,
+                  allergens: r.matchedAllergens,
+                  preferences: r.matchedPreferences,
+                  inferredRisks: [],
+                })),
               });
             }
 

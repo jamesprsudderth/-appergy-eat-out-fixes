@@ -126,3 +126,61 @@ export async function persistScanAttempt(
     return null;
   }
 }
+
+export interface LatestResultProfile {
+  profileId: string;
+  name: string;
+  status: string;
+  allergens: string[];
+  preferences: string[];
+  inferredRisks: string[];
+}
+
+export interface LatestResult {
+  status: ResultStatus;
+  manualReviewReason: string | null;
+  itemName: string | null;
+  itemFingerprint: string | null;
+  ingredientsExplicit: string[];
+  ingredientsInferred: string[];
+  profiles: LatestResultProfile[];
+  createdAt: ReturnType<typeof serverTimestamp>;
+}
+
+/**
+ * Write result/latest on every attempt (including MRR).
+ * Spec §2.5: Always write, data shape matches spec.
+ * Path: users/{userId}/scanSessions/{sessionId}/result/latest
+ */
+export async function persistLatestResult(
+  userId: string,
+  sessionId: string,
+  result: Omit<LatestResult, "createdAt">,
+): Promise<boolean> {
+  if (!db || !isFirebaseConfigured) {
+    console.log("Firebase not configured, skipping result persist");
+    return false;
+  }
+
+  try {
+    const resultRef = doc(
+      db,
+      "users",
+      userId,
+      "scanSessions",
+      sessionId,
+      "result",
+      "latest",
+    );
+
+    await setDoc(resultRef, {
+      ...result,
+      createdAt: serverTimestamp(),
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error persisting latest result:", error);
+    return false;
+  }
+}
