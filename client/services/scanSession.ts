@@ -289,3 +289,44 @@ export async function abandonSession(
     return false;
   }
 }
+
+/**
+ * Persist scan history idempotently using sessionId as document ID.
+ * Spec §2.6: Write history only once per session, including MRR results.
+ * Path: users/{userId}/scanHistory/{sessionId}
+ */
+export async function persistScanHistoryIdempotent(
+  userId: string,
+  sessionId: string,
+  data: {
+    itemName: string | null;
+    status: ResultStatus;
+    manualReviewReason: string | null;
+    selectedProfileIds: string[];
+  },
+): Promise<boolean> {
+  if (!db || !isFirebaseConfigured) {
+    console.log("Firebase not configured, skipping history persist");
+    return false;
+  }
+
+  try {
+    const historyRef = doc(db, "users", userId, "scanHistory", sessionId);
+    await setDoc(
+      historyRef,
+      {
+        sessionId,
+        itemName: data.itemName,
+        status: data.status,
+        manualReviewReason: data.manualReviewReason,
+        selectedProfileIds: data.selectedProfileIds,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+    return true;
+  } catch (error) {
+    console.error("Error persisting scan history:", error);
+    return false;
+  }
+}

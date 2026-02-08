@@ -25,7 +25,10 @@ import { ProfileResult, SafetyStatus } from "@/services/ai";
 import { ScanStackParamList } from "@/navigation/ScanStackNavigator";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveScanToHistory } from "@/services/scanHistory";
-import { completeSession } from "@/services/scanSession";
+import {
+  completeSession,
+  persistScanHistoryIdempotent,
+} from "@/services/scanSession";
 import { db, isFirebaseConfigured } from "@/services/firebase";
 
 type ResultsScreenRouteProp = RouteProp<ScanStackParamList, "Results">;
@@ -425,8 +428,20 @@ export default function ResultsScreen() {
       saveScanToHistory(user.uid, analysisResult).catch((error) => {
         console.error("Failed to save scan to history:", error);
       });
+      // Idempotent history persistence using sessionId as doc ID
+      if (sessionId) {
+        const hasUnsafe = analysisResult.results.some(
+          (r) => r.status === "unsafe",
+        );
+        persistScanHistoryIdempotent(user.uid, sessionId, {
+          itemName: null,
+          status: hasUnsafe ? "unsafe" : "safe",
+          manualReviewReason: null,
+          selectedProfileIds: analysisResult.results.map((r) => r.profileId),
+        });
+      }
     }
-  }, [user, analysisResult]);
+  }, [user, analysisResult, sessionId]);
 
   useEffect(() => {
     if (!hasShownModal.current && (unsafeCount > 0 || cautionCount > 0)) {
