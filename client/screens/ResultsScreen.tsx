@@ -29,6 +29,7 @@ import {
   completeSession,
   persistScanHistoryIdempotent,
 } from "@/services/scanSession";
+import { persistCorrection } from "@/services/corrections";
 import { db, isFirebaseConfigured } from "@/services/firebase";
 
 type ResultsScreenRouteProp = RouteProp<ScanStackParamList, "Results">;
@@ -434,6 +435,8 @@ export default function ResultsScreen() {
   const [isSavingKeyword, setIsSavingKeyword] = useState(false);
   const [showUnsafeModal, setShowUnsafeModal] = useState(false);
   const [mrrDismissed, setMrrDismissed] = useState(false);
+  const [showCorrectionThankYou, setShowCorrectionThankYou] = useState(false);
+  const hasCorrected = useRef(false);
   const hasShownModal = useRef(false);
 
   const safeCount = analysisResult.results.filter(
@@ -509,6 +512,36 @@ export default function ResultsScreen() {
       completeSession(user.uid, sessionId);
     }
     navigation.popToTop();
+  };
+
+  const handleCorrectResult = () => {
+    if (hasCorrected.current) return;
+    hasCorrected.current = true;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Log the correction
+    if (user && sessionId) {
+      persistCorrection(user.uid, {
+        sessionId,
+        itemFingerprint: null,
+        before: {
+          status: overallStatus,
+          allergens: analysisResult.results.flatMap((r) => r.matchedAllergens),
+          preferences: analysisResult.results.flatMap(
+            (r) => r.matchedPreferences,
+          ),
+        },
+        after: {
+          status: "safe",
+          allergens: [],
+          preferences: [],
+        },
+      });
+    }
+
+    // Show thank-you exactly once
+    setShowCorrectionThankYou(true);
+    setTimeout(() => setShowCorrectionThankYou(false), 3000);
   };
 
   const handleAddToKeywords = (ingredient: string) => {
@@ -754,6 +787,34 @@ export default function ResultsScreen() {
           {analysisResult.results.map((result) => (
             <ResultCard key={result.profileId} result={result} />
           ))}
+        </View>
+
+        {/* Correction thank-you (shown exactly once) */}
+        {showCorrectionThankYou ? (
+          <View style={styles.thankYouBanner}>
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={AppColors.success}
+            />
+            <ThemedText style={styles.thankYouText}>
+              Thank you for your correction! It has been logged.
+            </ThemedText>
+          </View>
+        ) : null}
+
+        {/* Always-visible actions per spec */}
+        <View style={styles.actionsSection}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleCorrectResult}
+            disabled={hasCorrected.current}
+          >
+            <Feather name="edit-3" size={16} color={AppColors.primary} />
+            <ThemedText style={styles.actionButtonText}>
+              Correct this result
+            </ThemedText>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.disclaimerContainer}>
@@ -1144,5 +1205,42 @@ const styles = StyleSheet.create({
     color: AppColors.secondaryText,
     textAlign: "center",
     flex: 1,
+  },
+  thankYouBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: AppColors.success + "15",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.lg,
+    borderWidth: 1,
+    borderColor: AppColors.success + "30",
+  },
+  thankYouText: {
+    fontSize: 14,
+    color: AppColors.success,
+    flex: 1,
+  },
+  actionsSection: {
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: AppColors.primary + "40",
+    backgroundColor: AppColors.primary + "10",
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.primary,
   },
 });
