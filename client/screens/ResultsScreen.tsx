@@ -420,7 +420,12 @@ export default function ResultsScreen() {
   const { user, isDemoMode, refreshUserProfile } = useAuth();
   const hasSaved = useRef(false);
 
-  const { analysisResult, sessionId } = route.params;
+  const {
+    analysisResult,
+    sessionId,
+    isManualReview = false,
+    showEscalation = false,
+  } = route.params;
 
   const [showAddKeywordModal, setShowAddKeywordModal] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<string | null>(
@@ -428,6 +433,7 @@ export default function ResultsScreen() {
   );
   const [isSavingKeyword, setIsSavingKeyword] = useState(false);
   const [showUnsafeModal, setShowUnsafeModal] = useState(false);
+  const [mrrDismissed, setMrrDismissed] = useState(false);
   const hasShownModal = useRef(false);
 
   const safeCount = analysisResult.results.filter(
@@ -444,8 +450,13 @@ export default function ResultsScreen() {
     unsafeCount > 0 ? "unsafe" : cautionCount > 0 ? "caution" : "safe";
 
   // Derive spec verdict: safe | unsafe | manual_review_required
-  const verdict: VerdictStatus =
-    unsafeCount > 0 ? "unsafe" : cautionCount > 0 ? "unsafe" : "safe";
+  const verdict: VerdictStatus = isManualReview
+    ? "manual_review_required"
+    : unsafeCount > 0
+      ? "unsafe"
+      : cautionCount > 0
+        ? "unsafe"
+        : "safe";
 
   const matchedIngredients = analysisResult.matchedIngredients || [];
   const matchedNames = new Set(
@@ -574,6 +585,35 @@ export default function ResultsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <VerdictHeader verdict={verdict} />
+
+        {/* MRR dismissible banner */}
+        {isManualReview && !mrrDismissed ? (
+          <View style={styles.mrrBanner}>
+            <ThemedText style={styles.mrrText}>
+              We could not confidently determine safety. Please verify this item
+              manually.
+            </ThemedText>
+            <TouchableOpacity
+              style={styles.mrrDismissButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMrrDismissed(true);
+              }}
+            >
+              <ThemedText style={styles.mrrDismissText}>Dismiss</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* Escalation message after 3 consecutive MRR */}
+        {showEscalation ? (
+          <View style={styles.escalationBanner}>
+            <ThemedText style={styles.escalationText}>
+              Our apologies. Our goal is to keep you safe. Please double-check
+              this item manually.
+            </ThemedText>
+          </View>
+        ) : null}
 
         <View style={styles.summary}>
           <View style={styles.summaryItem}>
@@ -836,6 +876,47 @@ const styles = StyleSheet.create({
   },
   verdictEmoji: {
     fontSize: 36,
+  },
+  mrrBanner: {
+    backgroundColor: AppColors.warning + "20",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: AppColors.warning,
+  },
+  mrrText: {
+    fontSize: 14,
+    color: AppColors.warning,
+    lineHeight: 20,
+    marginBottom: Spacing.sm,
+  },
+  mrrDismissButton: {
+    alignSelf: "flex-end",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: AppColors.warning + "30",
+  },
+  mrrDismissText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: AppColors.warning,
+  },
+  escalationBanner: {
+    backgroundColor: AppColors.destructive + "15",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: AppColors.destructive + "50",
+  },
+  escalationText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: AppColors.destructive,
+    lineHeight: 22,
+    textAlign: "center",
   },
   statusLabel: {
     fontSize: 28,
