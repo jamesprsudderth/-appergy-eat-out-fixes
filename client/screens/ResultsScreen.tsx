@@ -37,6 +37,46 @@ type ResultsScreenNavigationProp = NativeStackNavigationProp<
   "Results"
 >;
 
+type VerdictStatus = "safe" | "unsafe" | "manual_review_required";
+
+/**
+ * Verdict header per spec §3:
+ * Exactly one of: ✅ Safe, ❌ Unsafe, 🟡 Manual Review Required
+ */
+function VerdictHeader({ verdict }: { verdict: VerdictStatus }) {
+  const config = {
+    safe: {
+      emoji: "\u2705",
+      label: "Safe",
+      color: AppColors.success,
+      bg: "#1a3d2e",
+    },
+    unsafe: {
+      emoji: "\u274c",
+      label: "Unsafe",
+      color: AppColors.destructive,
+      bg: "#3d1a1a",
+    },
+    manual_review_required: {
+      emoji: "\ud83d\udfe1",
+      label: "Manual Review Required",
+      color: AppColors.warning,
+      bg: "#3d3a1a",
+    },
+  };
+
+  const c = config[verdict];
+
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: c.bg }]}>
+      <ThemedText style={styles.verdictEmoji}>{c.emoji}</ThemedText>
+      <ThemedText style={[styles.statusLabel, { color: c.color }]}>
+        {c.label}
+      </ThemedText>
+    </View>
+  );
+}
+
 function StatusBadge({ status }: { status: SafetyStatus }) {
   const config = {
     safe: {
@@ -417,6 +457,10 @@ export default function ResultsScreen() {
   const overallStatus: SafetyStatus =
     unsafeCount > 0 ? "unsafe" : cautionCount > 0 ? "caution" : "safe";
 
+  // Derive spec verdict: safe | unsafe | manual_review_required
+  const verdict: VerdictStatus =
+    unsafeCount > 0 ? "unsafe" : cautionCount > 0 ? "unsafe" : "safe";
+
   const matchedIngredients = analysisResult.matchedIngredients || [];
   const matchedNames = new Set(
     matchedIngredients.map((m) => m.name.toLowerCase()),
@@ -543,7 +587,7 @@ export default function ResultsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <StatusBadge status={overallStatus} />
+        <VerdictHeader verdict={verdict} />
 
         <View style={styles.summary}>
           <View style={styles.summaryItem}>
@@ -803,6 +847,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.lg,
     gap: Spacing.md,
+  },
+  verdictEmoji: {
+    fontSize: 36,
   },
   statusLabel: {
     fontSize: 28,
