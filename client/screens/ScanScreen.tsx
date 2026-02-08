@@ -39,6 +39,7 @@ import {
 } from "@/services/analysisPipeline";
 import { useAuth } from "@/contexts/AuthContext";
 import { db, isFirebaseConfigured } from "@/services/firebase";
+import { createScanSession } from "@/services/scanSession";
 
 type ScanScreenNavigationProp = NativeStackNavigationProp<
   ScanStackParamList,
@@ -68,6 +69,7 @@ export default function ScanScreen() {
   const [showProfileSelector, setShowProfileSelector] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [isProcessingBarcode, setIsProcessingBarcode] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
 
   const selectedProfiles = profiles.filter((p) =>
@@ -234,6 +236,16 @@ export default function ScanScreen() {
     setIsProcessingBarcode(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+    // Create scan session for barcode scan
+    if (!sessionId && user) {
+      const newSessionId = await createScanSession(
+        user.uid,
+        "barcode",
+        selectedProfileIds,
+      );
+      if (newSessionId) setSessionId(newSessionId);
+    }
+
     try {
       // Look up the product using Open Food Facts API
       const product = await lookupBarcode(barcode);
@@ -369,6 +381,16 @@ export default function ScanScreen() {
 
     setIsCapturing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Create scan session if not already in one
+    if (!sessionId && user) {
+      const newSessionId = await createScanSession(
+        user.uid,
+        scanMode,
+        selectedProfileIds,
+      );
+      if (newSessionId) setSessionId(newSessionId);
+    }
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
