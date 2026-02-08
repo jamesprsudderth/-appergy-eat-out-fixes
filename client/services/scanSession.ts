@@ -16,7 +16,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebase";
-import { updateSessionAttemptCounters } from "../../src/services/scanHelpers";
+import {
+  updateSessionAttemptCounters,
+  computeItemFingerprint,
+} from "../../src/services/scanHelpers";
 
 export type ScanSessionStatus = "in_progress" | "completed" | "abandoned";
 
@@ -329,4 +332,48 @@ export async function persistScanHistoryIdempotent(
     console.error("Error persisting scan history:", error);
     return false;
   }
+}
+
+/**
+ * Compute and store item fingerprint on session and result/latest.
+ * Spec §4: Fingerprint precedence: confirmedName > guessedName
+ * Recompute if item name is confirmed later.
+ */
+export async function computeAndStoreFingerprint(
+  userId: string,
+  sessionId: string,
+  confirmedName: string | null,
+  guessedName: string | null,
+): Promise<string | null> {
+  const fingerprint = computeItemFingerprint(confirmedName, guessedName);
+
+  if (!db || !isFirebaseConfigured) return fingerprint;
+
+  try {
+    const sessionRef = doc(db, "users", userId, "scanSessions", sessionId);
+    await updateDoc(sessionRef, {
+      itemFingerprint: fingerprint,
+      itemNameConfirmed: confirmedName,
+      itemNameGuess: guessedName,
+    });
+
+    // Also update result/latest with the fingerprint
+    const resultRef = doc(
+      db,
+      "users",
+      userId,
+      "scanSessions",
+      sessionId,
+      "result",
+      "latest",
+    );
+    await updateDoc(resultRef, {
+      itemFingerprint: fingerprint,
+      itemName: confirmedName || guessedName || null,
+    });
+  } catch (error) {
+    console.error("Error storing fingerprint:", error);
+  }
+
+  return fingerprint;
 }
