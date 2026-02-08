@@ -16,6 +16,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebase";
+import { updateSessionAttemptCounters } from "../../src/services/scanHelpers";
 
 export type ScanSessionStatus = "in_progress" | "completed" | "abandoned";
 
@@ -183,4 +184,62 @@ export async function persistLatestResult(
     console.error("Error persisting latest result:", error);
     return false;
   }
+}
+
+export interface SessionCounterState {
+  attemptCount: number;
+  manualReviewCount: number;
+  escalationShown: boolean;
+}
+
+/**
+ * Update session attempt counters and persist to Firestore.
+ * Uses updateSessionAttemptCounters from scanHelpers.
+ * Spec §1: 3-fail MRR escalation
+ *  - manualReviewCount increments ONLY on MRR
+ *  - resets on safe/unsafe
+ *  - Escalation triggers at exactly 3 consecutive MRR
+ *
+ * Returns { shouldShowEscalation, updatedCounters }
+ */
+export async function updateAndPersistSessionCounters(
+  userId: string,
+  sessionId: string,
+  currentCounters: SessionCounterState,
+  isMRR: boolean,
+): Promise<{
+  shouldShowEscalation: boolean;
+  counters: SessionCounterState;
+}> {
+  const result = updateSessionAttemptCounters(currentCounters, isMRR);
+
+  const updatedCounters: SessionCounterState = {
+    attemptCount: result.attemptCount,
+    manualReviewCount: result.manualReviewCount,
+    escalationShown: result.escalationShown,
+  };
+
+  if (db && isFirebaseConfigured) {
+    try {
+      const sessionRef = doc(
+        db,
+        "users",
+        userId,
+        "scanSessions",
+        sessionId,
+      );
+      await updateDoc(sessionRef, {
+        attemptCount: updatedCounters.attemptCount,
+        manualReviewCount: updatedCounters.manualReviewCount,
+        escalationShown: updatedCounters.escalationShown,
+      });
+    } catch (error) {
+      console.error("Error updating session counters:", error);
+    }
+  }
+
+  return {
+    shouldShowEscalation: result.shouldShowEscalation,
+    counters: updatedCounters,
+  };
 }

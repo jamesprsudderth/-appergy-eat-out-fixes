@@ -43,6 +43,8 @@ import {
   createScanSession,
   persistScanAttempt,
   persistLatestResult,
+  updateAndPersistSessionCounters,
+  type SessionCounterState,
 } from "@/services/scanSession";
 
 type ScanScreenNavigationProp = NativeStackNavigationProp<
@@ -74,6 +76,11 @@ export default function ScanScreen() {
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [isProcessingBarcode, setIsProcessingBarcode] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionCounters, setSessionCounters] = useState<SessionCounterState>({
+    attemptCount: 0,
+    manualReviewCount: 0,
+    escalationShown: false,
+  });
   const attemptCountRef = useRef(0);
   const cameraRef = useRef<CameraView>(null);
 
@@ -293,12 +300,13 @@ export default function ScanScreen() {
           ? analyzeIngredientsText(ingredientText, selectedProfiles)
           : analyzeBarcodeProduct(product, selectedProfiles);
 
-      // Persist barcode scan attempt and result/latest
+      // Persist barcode scan attempt, result/latest, and update counters
       attemptCountRef.current += 1;
       const hasUnsafe = analysisResult.results.some(
         (r) => r.status === "unsafe",
       );
       const resultStatus = hasUnsafe ? "unsafe" : "safe";
+      const isMRR = false;
       if (user && sessionId) {
         persistScanAttempt(user.uid, sessionId, {
           attemptNumber: attemptCountRef.current,
@@ -323,6 +331,13 @@ export default function ScanScreen() {
             inferredRisks: [],
           })),
         });
+        // Update session counters (3-fail MRR escalation)
+        updateAndPersistSessionCounters(
+          user.uid,
+          sessionId,
+          sessionCounters,
+          isMRR,
+        ).then(({ counters }) => setSessionCounters(counters));
       }
 
       navigation.navigate("Results", {
@@ -472,12 +487,13 @@ export default function ScanScreen() {
               result = analyzeIngredientsText(mockText, selectedProfiles);
             }
 
-            // Persist scan attempt and result/latest
+            // Persist scan attempt, result/latest, and update counters
             attemptCountRef.current += 1;
             const hasUnsafe = result.results.some(
               (r) => r.status === "unsafe",
             );
             const resultStatus = hasUnsafe ? "unsafe" : "safe";
+            const isMRR = false; // camera/server analysis is never MRR for now
             if (user && sessionId) {
               persistScanAttempt(user.uid, sessionId, {
                 attemptNumber: attemptCountRef.current,
@@ -502,6 +518,13 @@ export default function ScanScreen() {
                   inferredRisks: [],
                 })),
               });
+              // Update session counters (3-fail MRR escalation)
+              updateAndPersistSessionCounters(
+                user.uid,
+                sessionId,
+                sessionCounters,
+                isMRR,
+              ).then(({ counters }) => setSessionCounters(counters));
             }
 
             setIsAnalyzing(false);
