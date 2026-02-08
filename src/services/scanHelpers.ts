@@ -22,15 +22,24 @@ export function normalizeTokens(tokens: string[]): string[] {
     .map((t) =>
       t
         .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/[^a-z0-9\s]/g, "")
         .trim()
     )
     .filter(Boolean);
 }
 
-export function quickHeuristicScan(text: string, userAllergens: string[] = []): AnalysisResult {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const menuItems: MenuLine[] = lines.map((l) => ({ rawText: l, normalized: normalizeTokens(l.split(/\s+/)), confidence: 0.6 }));
+export function quickHeuristicScan(
+  text: string,
+  userAllergens: string[] = [],
+): AnalysisResult {
+  const lines = text.split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const menuItems: MenuLine[] = lines.map((l) => ({
+    rawText: l,
+    normalized: normalizeTokens(l.split(/\s+/)),
+    confidence: 0.6,
+  }));
 
   const lower = text.toLowerCase();
   const allergensDetected: AllergenMatch[] = [];
@@ -48,7 +57,10 @@ export function quickHeuristicScan(text: string, userAllergens: string[] = []): 
   return { menuItems, allergensDetected, dietaryFlags: [], confidence };
 }
 
-export function mergeAnalysis(local: Partial<AnalysisResult>, server: Partial<AnalysisResult>): AnalysisResult {
+export function mergeAnalysis(
+  local: Partial<AnalysisResult>,
+  server: Partial<AnalysisResult>,
+): AnalysisResult {
   const menuItems = server.menuItems ?? local.menuItems ?? [];
   const allergensDetected = server.allergensDetected ?? local.allergensDetected ?? [];
   const dietaryFlags = server.dietaryFlags ?? local.dietaryFlags ?? [];
@@ -63,16 +75,26 @@ export function mergeAnalysis(local: Partial<AnalysisResult>, server: Partial<An
 }
 
 // Compute a stable fingerprint for an item using precedence: confirmedName > guessedName
-export function computeItemFingerprint(confirmedName?: string | null, guessedName?: string | null): string | null {
+export function computeItemFingerprint(
+  confirmedName?: string | null,
+  guessedName?: string | null,
+): string | null {
   const source = (confirmedName && confirmedName.trim()) || (guessedName && guessedName.trim());
   if (!source) return null;
-  const normalized = normalizeTokens([source]).join('-');
+  const normalized = normalizeTokens([source]).join("-");
   if (!normalized) return null;
   return `fp:${normalized}`;
 }
 
 // Update session counters for attempts and manual review escalation
-export function updateSessionAttemptCounters(session: { attemptCount?: number; manualReviewCount?: number; escalationShown?: boolean }, isMRR: boolean) {
+export function updateSessionAttemptCounters(
+  session: {
+    attemptCount?: number;
+    manualReviewCount?: number;
+    escalationShown?: boolean;
+  },
+  isMRR: boolean,
+) {
   const attemptCount = (session.attemptCount ?? 0) + 1;
   let manualReviewCount = session.manualReviewCount ?? 0;
   if (isMRR) {
@@ -83,24 +105,36 @@ export function updateSessionAttemptCounters(session: { attemptCount?: number; m
   const escalationShown = session.escalationShown ?? false;
   const shouldShowEscalation = !escalationShown && manualReviewCount >= 3;
 
-  return { attemptCount, manualReviewCount, escalationShown: escalationShown || shouldShowEscalation, shouldShowEscalation };
+  return {
+    attemptCount,
+    manualReviewCount,
+    escalationShown: escalationShown || shouldShowEscalation,
+    shouldShowEscalation,
+  };
 }
 
 // Apply a user's override payload to an analysis result
-export function applyUserOverrideToResult(result: AnalysisResult, overridePayload: Partial<AnalysisResult>): AnalysisResult {
+export function applyUserOverrideToResult(
+  result: AnalysisResult,
+  overridePayload: Partial<AnalysisResult>,
+): AnalysisResult {
   const merged = mergeAnalysis(result, overridePayload);
 
   // mark corrected findings as user_corrected via adding a dietaryFlag (lightweight)
   if (overridePayload.allergensDetected && overridePayload.allergensDetected.length > 0) {
-    merged.dietaryFlags = Array.from(new Set([...(merged.dietaryFlags ?? []), 'user_corrected']));
+    merged.dietaryFlags = Array.from(new Set([...(merged.dietaryFlags ?? []), "user_corrected"]));
   }
 
   return merged;
 }
 
 // Only create admin alerts when allergen data is present (not preferences-only)
-export function shouldCreateAdminAlert(result: AnalysisResult): boolean {
-  return Array.isArray(result.allergensDetected) && result.allergensDetected.length > 0;
+export function shouldCreateAdminAlert(
+  result: AnalysisResult,
+): boolean {
+  return (
+    Array.isArray(result.allergensDetected) && result.allergensDetected.length > 0
+  );
 }
 
 export default {
