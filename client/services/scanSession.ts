@@ -243,3 +243,49 @@ export async function updateAndPersistSessionCounters(
     counters: updatedCounters,
   };
 }
+
+/**
+ * Mark session as completed when user leaves results normally.
+ * Spec §3.4: Status transitions
+ */
+export async function completeSession(
+  userId: string,
+  sessionId: string,
+): Promise<boolean> {
+  if (!db || !isFirebaseConfigured) return false;
+
+  try {
+    const sessionRef = doc(db, "users", userId, "scanSessions", sessionId);
+    await updateDoc(sessionRef, {
+      status: "completed",
+      endedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error completing session:", error);
+    return false;
+  }
+}
+
+/**
+ * Mark session as abandoned when user exits scan flow mid-session.
+ * Spec §3.4: Status transitions
+ */
+export async function abandonSession(
+  userId: string,
+  sessionId: string,
+): Promise<boolean> {
+  if (!db || !isFirebaseConfigured) return false;
+
+  try {
+    const sessionRef = doc(db, "users", userId, "scanSessions", sessionId);
+    await updateDoc(sessionRef, {
+      status: "abandoned",
+      endedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error abandoning session:", error);
+    return false;
+  }
+}

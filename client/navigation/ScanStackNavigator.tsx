@@ -11,7 +11,7 @@ import { AnalysisResult } from "@/services/ai";
 export type ScanStackParamList = {
   Scan: undefined;
   GroceryScan: undefined;
-  Results: { analysisResult: AnalysisResult };
+  Results: { analysisResult: AnalysisResult; sessionId?: string | null };
 };
 
 const Stack = createNativeStackNavigator<ScanStackParamList>();

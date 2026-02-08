@@ -25,6 +25,7 @@ import { ProfileResult, SafetyStatus } from "@/services/ai";
 import { ScanStackParamList } from "@/navigation/ScanStackNavigator";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveScanToHistory } from "@/services/scanHistory";
+import { completeSession } from "@/services/scanSession";
 import { db, isFirebaseConfigured } from "@/services/firebase";
 
 type ResultsScreenRouteProp = RouteProp<ScanStackParamList, "Results">;
@@ -390,7 +391,7 @@ export default function ResultsScreen() {
   const { user, isDemoMode, refreshUserProfile } = useAuth();
   const hasSaved = useRef(false);
 
-  const { analysisResult } = route.params;
+  const { analysisResult, sessionId } = route.params;
 
   const [showAddKeywordModal, setShowAddKeywordModal] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<string | null>(
@@ -438,11 +439,19 @@ export default function ResultsScreen() {
 
   const handleScanAgain = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Complete the session before going back to scan
+    if (user && sessionId) {
+      completeSession(user.uid, sessionId);
+    }
     navigation.popToTop();
   };
 
   const handleDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Complete the session when user is done
+    if (user && sessionId) {
+      completeSession(user.uid, sessionId);
+    }
     navigation.popToTop();
   };
 

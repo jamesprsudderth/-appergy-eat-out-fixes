@@ -44,6 +44,7 @@ import {
   persistScanAttempt,
   persistLatestResult,
   updateAndPersistSessionCounters,
+  abandonSession,
   type SessionCounterState,
 } from "@/services/scanSession";
 
@@ -82,7 +83,13 @@ export default function ScanScreen() {
     escalationShown: false,
   });
   const attemptCountRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
+
+  // Keep ref in sync for cleanup
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   const selectedProfiles = profiles.filter((p) =>
     selectedProfileIds.includes(p.id),
@@ -90,6 +97,15 @@ export default function ScanScreen() {
 
   useEffect(() => {
     loadProfiles();
+  }, [user]);
+
+  // Abandon session on unmount if still in progress
+  useEffect(() => {
+    return () => {
+      if (sessionIdRef.current && user) {
+        abandonSession(user.uid, sessionIdRef.current);
+      }
+    };
   }, [user]);
 
   const loadProfiles = async () => {
@@ -342,6 +358,7 @@ export default function ScanScreen() {
 
       navigation.navigate("Results", {
         analysisResult,
+        sessionId,
       });
     } catch (error) {
       console.error("Barcode processing error:", error);
@@ -529,7 +546,10 @@ export default function ScanScreen() {
 
             setIsAnalyzing(false);
             setCapturedImage(null);
-            navigation.navigate("Results", { analysisResult: result });
+            navigation.navigate("Results", {
+              analysisResult: result,
+              sessionId,
+            });
           } catch (error) {
             console.error("Analysis error:", error);
             setIsAnalyzing(false);
