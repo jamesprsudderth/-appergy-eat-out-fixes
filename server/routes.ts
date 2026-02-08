@@ -19,14 +19,17 @@ interface ProfileInfo {
 }
 
 function buildIngredientAnalysisPrompt(profile: ProfileInfo): string {
-  const allAllergies = [...(profile.allergies || []), ...(profile.customAllergies || [])];
-  
+  const allAllergies = [
+    ...(profile.allergies || []),
+    ...(profile.customAllergies || []),
+  ];
+
   return `You are an expert food label analyst for Appergy, a food allergy safety app.
 
 **User Profile:**
-Allergies: ${allAllergies.join(', ') || 'None'}
-Preferences: ${(profile.preferences || []).join(', ') || 'None'}
-Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(', ') || 'None'}
+Allergies: ${allAllergies.join(", ") || "None"}
+Preferences: ${(profile.preferences || []).join(", ") || "None"}
+Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(", ") || "None"}
 
 **Task:** Analyze the ingredient label in the image and determine if the product is safe for this user.
 
@@ -56,14 +59,17 @@ Be extremely cautious - when in doubt, mark as Unsafe. Focus on severe allergy r
 }
 
 function buildMenuAnalysisPrompt(profile: ProfileInfo): string {
-  const allAllergies = [...(profile.allergies || []), ...(profile.customAllergies || [])];
-  
+  const allAllergies = [
+    ...(profile.allergies || []),
+    ...(profile.customAllergies || []),
+  ];
+
   return `You are an AI assistant for a food allergy app called Appergy. Your task is to analyze restaurant menu images, extract menu items, infer ingredients, and compare them against a user's dietary profile to identify potential risks.
 
 **User Profile:**
-Allergies: ${allAllergies.join(', ') || 'None'}
-Preferences: ${(profile.preferences || []).join(', ') || 'None'}
-Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(', ') || 'None'}
+Allergies: ${allAllergies.join(", ") || "None"}
+Preferences: ${(profile.preferences || []).join(", ") || "None"}
+Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(", ") || "None"}
 
 **Instructions:**
 1. Extract all menu items with their names, descriptions, and prices from the image
@@ -95,30 +101,33 @@ Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(', ') || 'None'}
 Be thorough in identifying common allergens like milk, eggs, peanuts, tree nuts, fish, shellfish, wheat, soy, and sesame.`;
 }
 
-async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string): Promise<any> {
+async function analyzeImageWithOpenAI(
+  base64Image: string,
+  systemPrompt: string,
+): Promise<any> {
   if (!OPENAI_API_KEY) {
     throw new Error("OpenAI API key not configured");
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: "gpt-4o-mini",
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: "system", content: systemPrompt },
         {
-          role: 'user',
+          role: "user",
           content: [
             {
-              type: 'text',
-              text: 'Analyze this image and provide the structured JSON output as requested.',
+              type: "text",
+              text: "Analyze this image and provide the structured JSON output as requested.",
             },
             {
-              type: 'image_url',
+              type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${base64Image}`,
               },
@@ -138,13 +147,13 @@ async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string)
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
+
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     return JSON.parse(jsonMatch[0]);
   }
-  
-  throw new Error('Failed to parse AI response');
+
+  throw new Error("Failed to parse AI response");
 }
 
 function generateMockIngredientAnalysis(profiles: ProfileInfo[]): any {
@@ -194,7 +203,9 @@ function generateMockIngredientAnalysis(profiles: ProfileInfo[]): any {
 
     if (preferences.includes("Vegan")) {
       matchedPreferences.push("Not Vegan");
-      reasons.push("Contains animal-derived ingredients (milk, eggs) - not vegan");
+      reasons.push(
+        "Contains animal-derived ingredients (milk, eggs) - not vegan",
+      );
     }
     if (preferences.includes("Gluten-Free")) {
       matchedPreferences.push("Contains Gluten");
@@ -203,9 +214,10 @@ function generateMockIngredientAnalysis(profiles: ProfileInfo[]): any {
 
     forbiddenKeywords.forEach((keyword: string) => {
       const lowerKeyword = keyword.toLowerCase();
-      const matchedIng = mockIngredients.find(ing =>
-        ing.toLowerCase().includes(lowerKeyword) ||
-        lowerKeyword.includes(ing.toLowerCase())
+      const matchedIng = mockIngredients.find(
+        (ing) =>
+          ing.toLowerCase().includes(lowerKeyword) ||
+          lowerKeyword.includes(ing.toLowerCase()),
       );
       if (matchedIng) {
         matchedKeywords.push(matchedIng);
@@ -239,10 +251,7 @@ function generateMockIngredientAnalysis(profiles: ProfileInfo[]): any {
   };
 }
 
-import {
-  analyzeImageFull,
-  analyzeExtractedText,
-} from "./services/analysis";
+import { analyzeImageFull, analyzeExtractedText } from "./services/analysis";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Image Analysis: OCR + Deterministic Pipeline ───
@@ -262,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const result = await analyzeImageFull(
             base64Image,
             profiles,
-            OPENAI_API_KEY
+            OPENAI_API_KEY,
           );
           return res.json(result);
         } catch (aiError) {
@@ -310,13 +319,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { base64Image, profile } = req.body;
 
       if (!base64Image || !profile) {
-        return res.status(400).json({ error: "base64Image and profile are required" });
+        return res
+          .status(400)
+          .json({ error: "base64Image and profile are required" });
       }
 
       if (OPENAI_API_KEY) {
         try {
           const systemPrompt = buildMenuAnalysisPrompt(profile);
-          const aiResult = await analyzeImageWithOpenAI(base64Image, systemPrompt);
+          const aiResult = await analyzeImageWithOpenAI(
+            base64Image,
+            systemPrompt,
+          );
           return res.json(aiResult);
         } catch (aiError) {
           console.error("OpenAI menu analysis failed:", aiError);
@@ -328,25 +342,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         menu_items: [
           {
             name: "Grilled Chicken Salad",
-            description: "Fresh greens with grilled chicken, cherry tomatoes, and vinaigrette",
+            description:
+              "Fresh greens with grilled chicken, cherry tomatoes, and vinaigrette",
             price: "$14.99",
-            inferred_ingredients: ["chicken", "lettuce", "tomatoes", "olive oil", "vinegar"],
+            inferred_ingredients: [
+              "chicken",
+              "lettuce",
+              "tomatoes",
+              "olive oil",
+              "vinegar",
+            ],
             verdict: "Safe",
-            conflicts: []
+            conflicts: [],
           },
           {
             name: "Pasta Carbonara",
             description: "Creamy pasta with bacon and parmesan",
             price: "$16.99",
-            inferred_ingredients: ["pasta (wheat)", "eggs", "bacon", "parmesan cheese", "cream"],
+            inferred_ingredients: [
+              "pasta (wheat)",
+              "eggs",
+              "bacon",
+              "parmesan cheese",
+              "cream",
+            ],
             verdict: "Unsafe",
             conflicts: [
-              { type: "allergy_risk", conflict: "Wheat/Gluten", detail: "Contains pasta made from wheat flour" },
-              { type: "allergy_risk", conflict: "Dairy", detail: "Contains cream and parmesan cheese" },
-              { type: "allergy_risk", conflict: "Eggs", detail: "Traditional carbonara contains eggs" }
-            ]
-          }
-        ]
+              {
+                type: "allergy_risk",
+                conflict: "Wheat/Gluten",
+                detail: "Contains pasta made from wheat flour",
+              },
+              {
+                type: "allergy_risk",
+                conflict: "Dairy",
+                detail: "Contains cream and parmesan cheese",
+              },
+              {
+                type: "allergy_risk",
+                conflict: "Eggs",
+                detail: "Traditional carbonara contains eggs",
+              },
+            ],
+          },
+        ],
       });
     } catch (error: any) {
       console.error("Error analyzing menu:", error);
@@ -368,16 +407,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const suggestions = await generateDishSuggestionsWithOpenAI(
             restaurantName,
             allergies || "",
-            preferences || ""
+            preferences || "",
           );
           return res.json({ suggestions });
         } catch (aiError) {
-          console.error("OpenAI dish suggestions failed, using fallback:", aiError);
+          console.error(
+            "OpenAI dish suggestions failed, using fallback:",
+            aiError,
+          );
         }
       }
 
       // Fallback to local suggestions
-      const suggestions = generateMockSuggestions(restaurantName, allergies, preferences);
+      const suggestions = generateMockSuggestions(
+        restaurantName,
+        allergies,
+        preferences,
+      );
       res.json({ suggestions });
     } catch (error: any) {
       console.error("Error generating dish suggestions:", error);
@@ -388,7 +434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recipe generation endpoint
   app.post("/api/generate-recipe", async (req, res) => {
     try {
-      const { preference, allergies, dietaryPreferences, profileNames } = req.body;
+      const { preference, allergies, dietaryPreferences, profileNames } =
+        req.body;
 
       if (!preference) {
         return res.status(400).json({ error: "Recipe preference is required" });
@@ -396,7 +443,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (OPENAI_API_KEY) {
         try {
-          const prompt = buildRecipeGenerationPrompt(preference, allergies || [], dietaryPreferences || [], profileNames || []);
+          const prompt = buildRecipeGenerationPrompt(
+            preference,
+            allergies || [],
+            dietaryPreferences || [],
+            profileNames || [],
+          );
           const recipe = await generateRecipeWithOpenAI(prompt);
           recipe.generatedFor = profileNames || [];
           return res.json({ recipe });
@@ -406,7 +458,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fallback to mock recipe
-      const mockRecipe = generateMockRecipe(preference, allergies || [], profileNames || []);
+      const mockRecipe = generateMockRecipe(
+        preference,
+        allergies || [],
+        profileNames || [],
+      );
       res.json({ recipe: mockRecipe });
     } catch (error: any) {
       console.error("Error generating recipe:", error);
@@ -422,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 function generateMockSuggestions(
   restaurantName: string,
   allergies: string,
-  preferences: string
+  preferences: string,
 ): string[] {
   const isVegetarian = preferences.toLowerCase().includes("vegetarian");
   const isVegan = preferences.toLowerCase().includes("vegan");
@@ -448,8 +504,13 @@ function generateMockSuggestions(
       `Eggplant parmesan - Breaded eggplant with marinara and melted cheese`,
       `Greek salad with feta - Crisp vegetables with Kalamata olives and feta cheese`,
     ];
-    return hasDairy 
-      ? suggestions.map(s => s.replace(/mozzarella|ricotta|feta|cheese/gi, "dairy-free alternative"))
+    return hasDairy
+      ? suggestions.map((s) =>
+          s.replace(
+            /mozzarella|ricotta|feta|cheese/gi,
+            "dairy-free alternative",
+          ),
+        )
       : suggestions;
   }
 
@@ -475,7 +536,7 @@ function generateMockSuggestions(
 async function generateDishSuggestionsWithOpenAI(
   restaurantName: string,
   allergies: string,
-  preferences: string
+  preferences: string,
 ): Promise<string[]> {
   const prompt = `You are a food safety assistant for Appergy, a food allergy app.
 
@@ -500,7 +561,7 @@ Example: ["Grilled Salmon - No common allergens, naturally gluten-free", ...]`;
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
@@ -524,21 +585,29 @@ Example: ["Grilled Salmon - No common allergens, naturally gluten-free", ...]`;
   }
 
   // Fallback: split by newlines if not valid JSON
-  return text.split("\n").filter((line: string) => line.trim().length > 5).slice(0, 5);
+  return text
+    .split("\n")
+    .filter((line: string) => line.trim().length > 5)
+    .slice(0, 5);
 }
 
-function buildRecipeGenerationPrompt(preference: string, allergies: string[], dietaryPreferences: string[], profileNames: string[]): string {
+function buildRecipeGenerationPrompt(
+  preference: string,
+  allergies: string[],
+  dietaryPreferences: string[],
+  profileNames: string[],
+): string {
   return `You are a professional chef creating recipes for people with food allergies and dietary restrictions.
 
 **User Request:** ${preference}
 
 **Must Avoid (Allergies/Restrictions):**
-${allergies.length > 0 ? allergies.join(', ') : 'None specified'}
+${allergies.length > 0 ? allergies.join(", ") : "None specified"}
 
 **Dietary Preferences:**
-${dietaryPreferences.length > 0 ? dietaryPreferences.join(', ') : 'None specified'}
+${dietaryPreferences.length > 0 ? dietaryPreferences.join(", ") : "None specified"}
 
-**Cooking for:** ${profileNames.length > 0 ? profileNames.join(', ') : 'User'}
+**Cooking for:** ${profileNames.length > 0 ? profileNames.join(", ") : "User"}
 
 **Task:** Create a delicious, safe recipe that:
 1. Matches the user's request/cuisine preference
@@ -579,17 +648,20 @@ async function generateRecipeWithOpenAI(prompt: string): Promise<any> {
     throw new Error("OpenAI API key not configured");
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: "gpt-4o-mini",
       messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: 'Generate the recipe as specified. Return only valid JSON.' },
+        { role: "system", content: prompt },
+        {
+          role: "user",
+          content: "Generate the recipe as specified. Return only valid JSON.",
+        },
       ],
       max_tokens: 1500,
       temperature: 0.7,
@@ -603,20 +675,25 @@ async function generateRecipeWithOpenAI(prompt: string): Promise<any> {
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
+
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     return JSON.parse(jsonMatch[0]);
   }
-  
-  throw new Error('Failed to parse recipe response');
+
+  throw new Error("Failed to parse recipe response");
 }
 
-function generateMockRecipe(preference: string, allergies: string[], profileNames: string[]): any {
+function generateMockRecipe(
+  preference: string,
+  allergies: string[],
+  profileNames: string[],
+): any {
   const recipes: Record<string, any> = {
     pasta: {
       title: "Allergen-Free Pasta Primavera",
-      description: "A colorful and vibrant pasta dish loaded with fresh vegetables, tossed in olive oil and garlic.",
+      description:
+        "A colorful and vibrant pasta dish loaded with fresh vegetables, tossed in olive oil and garlic.",
       prepTime: "15 minutes",
       cookTime: "20 minutes",
       servings: 4,
@@ -631,7 +708,7 @@ function generateMockRecipe(preference: string, allergies: string[], profileName
         { item: "bell pepper, diced", amount: "1 medium" },
         { item: "fresh spinach", amount: "1 cup" },
         { item: "salt and pepper", amount: "to taste" },
-        { item: "fresh basil", amount: "for garnish" }
+        { item: "fresh basil", amount: "for garnish" },
       ],
       instructions: [
         "Cook pasta according to package directions. Drain and set aside.",
@@ -640,29 +717,39 @@ function generateMockRecipe(preference: string, allergies: string[], profileName
         "Add zucchini and bell pepper, cook for 5 minutes.",
         "Add cherry tomatoes and cook for 3 more minutes.",
         "Toss in cooked pasta and spinach, stir until wilted.",
-        "Season with salt and pepper, garnish with fresh basil."
+        "Season with salt and pepper, garnish with fresh basil.",
       ],
       allergenNotes: "This recipe is gluten-free and dairy-free.",
-      substitutionTips: ["Use regular pasta if gluten is not a concern", "Add grilled chicken for extra protein"],
-      generatedFor: profileNames
+      substitutionTips: [
+        "Use regular pasta if gluten is not a concern",
+        "Add grilled chicken for extra protein",
+      ],
+      generatedFor: profileNames,
     },
     default: {
       title: "Simple Safe Stir-Fry",
-      description: "A quick and healthy stir-fry with crisp vegetables and your choice of protein in a savory sauce.",
+      description:
+        "A quick and healthy stir-fry with crisp vegetables and your choice of protein in a savory sauce.",
       prepTime: "10 minutes",
       cookTime: "15 minutes",
       servings: 4,
       difficulty: "Easy",
       cuisine: "Asian",
       ingredients: [
-        { item: "mixed vegetables (broccoli, carrots, snap peas)", amount: "2 cups" },
-        { item: "protein of choice (chicken, tofu, or shrimp)", amount: "1 lb" },
+        {
+          item: "mixed vegetables (broccoli, carrots, snap peas)",
+          amount: "2 cups",
+        },
+        {
+          item: "protein of choice (chicken, tofu, or shrimp)",
+          amount: "1 lb",
+        },
         { item: "olive oil", amount: "3 tablespoons" },
         { item: "garlic, minced", amount: "2 cloves" },
         { item: "fresh ginger, grated", amount: "1 inch" },
         { item: "coconut aminos (soy-free)", amount: "3 tablespoons" },
         { item: "rice vinegar", amount: "1 tablespoon" },
-        { item: "cooked rice", amount: "for serving" }
+        { item: "cooked rice", amount: "for serving" },
       ],
       instructions: [
         "Cut protein into bite-sized pieces and vegetables into uniform sizes.",
@@ -671,12 +758,16 @@ function generateMockRecipe(preference: string, allergies: string[], profileName
         "Add remaining oil, then garlic and ginger. Cook 30 seconds.",
         "Add vegetables and stir-fry for 4-5 minutes until crisp-tender.",
         "Return protein to pan, add coconut aminos and rice vinegar.",
-        "Toss everything together and serve over rice."
+        "Toss everything together and serve over rice.",
       ],
-      allergenNotes: "This recipe uses coconut aminos instead of soy sauce to avoid soy allergens.",
-      substitutionTips: ["Use tamari if soy is not a concern", "Swap rice for cauliflower rice for low-carb option"],
-      generatedFor: profileNames
-    }
+      allergenNotes:
+        "This recipe uses coconut aminos instead of soy sauce to avoid soy allergens.",
+      substitutionTips: [
+        "Use tamari if soy is not a concern",
+        "Swap rice for cauliflower rice for low-carb option",
+      ],
+      generatedFor: profileNames,
+    },
   };
 
   const lowerPref = preference.toLowerCase();

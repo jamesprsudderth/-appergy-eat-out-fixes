@@ -98,7 +98,8 @@ export default function LoginScreen() {
 
     if (!isFirebaseConfigured || !auth) {
       setError("root", {
-        message: "Firebase is not configured. Use Demo Mode to explore the app.",
+        message:
+          "Firebase is not configured. Use Demo Mode to explore the app.",
       });
       return;
     }
@@ -108,7 +109,7 @@ export default function LoginScreen() {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         data.email.trim().toLowerCase(),
-        data.password
+        data.password,
       );
       const user = userCredential.user;
 
@@ -161,7 +162,7 @@ export default function LoginScreen() {
     if (!watchedEmail?.trim()) {
       Alert.alert(
         "Enter Email",
-        "Please enter your email address first, then tap Forgot Password."
+        "Please enter your email address first, then tap Forgot Password.",
       );
       return;
     }
@@ -169,7 +170,7 @@ export default function LoginScreen() {
     if (!isFirebaseConfigured || !auth) {
       Alert.alert(
         "Not Available",
-        "Password reset is not available in demo mode."
+        "Password reset is not available in demo mode.",
       );
       return;
     }
@@ -180,7 +181,7 @@ export default function LoginScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         "Email Sent",
-        `Password reset instructions have been sent to ${watchedEmail.trim()}. Check your inbox and spam folder.`
+        `Password reset instructions have been sent to ${watchedEmail.trim()}. Check your inbox and spam folder.`,
       );
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -191,7 +192,8 @@ export default function LoginScreen() {
       };
       Alert.alert(
         "Error",
-        errorMessages[error.code] || "Failed to send reset email. Please try again."
+        errorMessages[error.code] ||
+          "Failed to send reset email. Please try again.",
       );
     } finally {
       setIsResettingPassword(false);
@@ -258,7 +260,9 @@ export default function LoginScreen() {
           <Feather
             name="mail"
             size={20}
-            color={errors.email ? AppColors.destructive : AppColors.secondaryText}
+            color={
+              errors.email ? AppColors.destructive : AppColors.secondaryText
+            }
             style={styles.inputIcon}
           />
           <Controller
@@ -292,7 +296,9 @@ export default function LoginScreen() {
           <Feather
             name="lock"
             size={20}
-            color={errors.password ? AppColors.destructive : AppColors.secondaryText}
+            color={
+              errors.password ? AppColors.destructive : AppColors.secondaryText
+            }
             style={styles.inputIcon}
           />
           <Controller
@@ -335,7 +341,9 @@ export default function LoginScreen() {
           {isResettingPassword ? (
             <ActivityIndicator size="small" color={AppColors.primary} />
           ) : (
-            <ThemedText style={[styles.forgotPasswordText, { color: AppColors.primary }]}>
+            <ThemedText
+              style={[styles.forgotPasswordText, { color: AppColors.primary }]}
+            >
               Forgot Password?
             </ThemedText>
           )}
@@ -346,11 +354,7 @@ export default function LoginScreen() {
           disabled={isLoading}
           style={styles.loginButton}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            "Sign In"
-          )}
+          {isLoading ? <ActivityIndicator color="#fff" /> : "Sign In"}
         </Button>
 
         <View style={styles.signupContainer}>

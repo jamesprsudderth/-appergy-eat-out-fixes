@@ -157,13 +157,19 @@ export default function ScanScreen() {
             const memberAllergies = data.allergies || {};
             const memberCommonAllergies = Array.isArray(memberAllergies)
               ? memberAllergies
-              : [...(memberAllergies.common || []), ...(memberAllergies.custom || [])];
+              : [
+                  ...(memberAllergies.common || []),
+                  ...(memberAllergies.custom || []),
+                ];
 
             // Extract preferences from structured format for family members
             const memberPreferences = data.preferences || {};
             const memberCommonPreferences = Array.isArray(memberPreferences)
               ? memberPreferences
-              : [...(memberPreferences.common || []), ...(memberPreferences.custom || [])];
+              : [
+                  ...(memberPreferences.common || []),
+                  ...(memberPreferences.custom || []),
+                ];
 
             loadedProfiles.push({
               id: `member${i}`,
@@ -210,11 +216,14 @@ export default function ScanScreen() {
     setProfiles(loadedProfiles);
     setSelectedProfileIds(loadedProfiles.map((p) => p.id));
 
-    console.log("Loaded profiles:", loadedProfiles.map(p => ({
-      name: p.name,
-      allergies: p.allergies,
-      preferences: p.preferences
-    })));
+    console.log(
+      "Loaded profiles:",
+      loadedProfiles.map((p) => ({
+        name: p.name,
+        allergies: p.allergies,
+        preferences: p.preferences,
+      })),
+    );
   };
 
   const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
@@ -250,7 +259,7 @@ export default function ScanScreen() {
                 setIsProcessingBarcode(false);
               },
             },
-          ]
+          ],
         );
         return;
       }
@@ -262,9 +271,10 @@ export default function ScanScreen() {
         ...(product.allergens || []).map((a) => `Contains: ${a}`),
       ].join(", ");
 
-      const analysisResult = ingredientText.length > 0
-        ? analyzeIngredientsText(ingredientText, selectedProfiles)
-        : analyzeBarcodeProduct(product, selectedProfiles);
+      const analysisResult =
+        ingredientText.length > 0
+          ? analyzeIngredientsText(ingredientText, selectedProfiles)
+          : analyzeBarcodeProduct(product, selectedProfiles);
 
       navigation.navigate("Results", {
         analysisResult,
@@ -274,7 +284,7 @@ export default function ScanScreen() {
       Alert.alert(
         "Scan Error",
         "Failed to process the barcode. Please try again.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
     } finally {
       setIsProcessingBarcode(false);
@@ -388,10 +398,7 @@ export default function ScanScreen() {
             // Step 1: Try server API (OCR + deterministic pipeline)
             let result;
             try {
-              result = await analyzeImage(
-                manipulated.base64,
-                selectedProfiles,
-              );
+              result = await analyzeImage(manipulated.base64, selectedProfiles);
 
               // Server now runs the full pipeline and returns
               // AnalysisResult directly — no client-side re-analysis needed.

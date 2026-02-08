@@ -44,7 +44,7 @@ export async function saveScanToHistory(
   userId: string,
   result: AnalysisResult,
   scanType: "camera" | "barcode" = "camera",
-  productName?: string
+  productName?: string,
 ): Promise<string | null> {
   if (!db || !isFirebaseConfigured) {
     console.log("Firebase not configured, skipping history save");
@@ -85,7 +85,7 @@ export async function saveScanToHistory(
 
 export async function getScanHistory(
   userId: string,
-  maxItems: number = 50
+  maxItems: number = 50,
 ): Promise<ScanHistoryItem[]> {
   if (!db || !isFirebaseConfigured) {
     return [];
@@ -108,7 +108,7 @@ export async function getScanHistory(
 
 export async function deleteScanFromHistory(
   userId: string,
-  scanId: string
+  scanId: string,
 ): Promise<boolean> {
   if (!db || !isFirebaseConfigured) return false;
 

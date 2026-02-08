@@ -1,6 +1,6 @@
 /*
  * AI Analysis Service
- * 
+ *
  * This service handles image analysis for allergen detection.
  * Includes cost optimization: rate limiting and image size checks.
  */
@@ -29,16 +29,21 @@ async function checkRateLimit(): Promise<boolean> {
   }
 }
 
-function checkImageSize(base64Image: string): { valid: boolean; sizeKB: number } {
+function checkImageSize(base64Image: string): {
+  valid: boolean;
+  sizeKB: number;
+} {
   // Base64 string length * 0.75 approximates actual byte size
   const estimatedBytes = base64Image.length * 0.75;
   const sizeKB = Math.round(estimatedBytes / 1024);
-  
+
   if (estimatedBytes > MAX_IMAGE_SIZE_BYTES) {
-    console.warn(`Image too large: ${sizeKB}KB (max: ${MAX_IMAGE_SIZE_BYTES / 1024}KB)`);
+    console.warn(
+      `Image too large: ${sizeKB}KB (max: ${MAX_IMAGE_SIZE_BYTES / 1024}KB)`,
+    );
     return { valid: false, sizeKB };
   }
-  
+
   console.log(`Image size: ${sizeKB}KB - OK`);
   return { valid: true, sizeKB };
 }
@@ -76,16 +81,19 @@ export interface ProfileInfo {
   forbiddenKeywords?: string[];
 }
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN 
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` 
+const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "http://localhost:5000";
 
 export async function analyzeImage(
   base64Image: string,
-  selectedProfiles: ProfileInfo[]
+  selectedProfiles: ProfileInfo[],
 ): Promise<AnalysisResult> {
-  console.log("Analyzing image with profiles:", selectedProfiles.map(p => p.name));
-  
+  console.log(
+    "Analyzing image with profiles:",
+    selectedProfiles.map((p) => p.name),
+  );
+
   // Cost optimization: Check image size
   const sizeCheck = checkImageSize(base64Image);
   if (!sizeCheck.valid) {
@@ -139,7 +147,7 @@ function generateMockAnalysis(profiles: ProfileInfo[]): AnalysisResult {
   ];
 
   const matchedIngredients: MatchedIngredient[] = [];
-  
+
   const mockResults: ProfileResult[] = profiles.map((profile, index) => {
     const matchedAllergens: string[] = [];
     const matchedKeywords: string[] = [];
@@ -147,14 +155,16 @@ function generateMockAnalysis(profiles: ProfileInfo[]): AnalysisResult {
     const reasons: string[] = [];
 
     const hasDairy = profile.allergies.includes("Dairy");
-    const hasGluten = profile.allergies.includes("Gluten") || profile.allergies.includes("Wheat");
+    const hasGluten =
+      profile.allergies.includes("Gluten") ||
+      profile.allergies.includes("Wheat");
     const hasPeanuts = profile.allergies.includes("Peanuts");
     const hasSoy = profile.allergies.includes("Soy");
     const hasEggs = profile.allergies.includes("Eggs");
     const isVegan = profile.preferences.includes("Vegan");
     const isVegetarian = profile.preferences.includes("Vegetarian");
     const isGlutenFree = profile.preferences.includes("Gluten-Free");
-    
+
     const keywords = profile.forbiddenKeywords || [];
 
     if (hasDairy) {
@@ -162,11 +172,16 @@ function generateMockAnalysis(profiles: ProfileInfo[]): AnalysisResult {
       reasons.push("Contains milk (dairy allergen)");
       addMatchedIngredient(matchedIngredients, "Milk", "allergen", profile.id);
     }
-    
+
     if (hasGluten) {
       matchedAllergens.push("Wheat flour");
       reasons.push("Contains wheat flour (gluten/wheat allergen)");
-      addMatchedIngredient(matchedIngredients, "Wheat flour", "allergen", profile.id);
+      addMatchedIngredient(
+        matchedIngredients,
+        "Wheat flour",
+        "allergen",
+        profile.id,
+      );
     }
 
     if (hasEggs) {
@@ -178,15 +193,27 @@ function generateMockAnalysis(profiles: ProfileInfo[]): AnalysisResult {
     if (hasSoy) {
       matchedAllergens.push("Soy lecithin");
       reasons.push("Contains soy lecithin (soy allergen)");
-      addMatchedIngredient(matchedIngredients, "Soy lecithin", "allergen", profile.id);
+      addMatchedIngredient(
+        matchedIngredients,
+        "Soy lecithin",
+        "allergen",
+        profile.id,
+      );
     }
 
     if (isVegan || isVegetarian) {
-      if (mockIngredients.includes("Milk") || mockIngredients.includes("Eggs")) {
-        matchedPreferences.push(isVegan ? "Not Vegan" : "Contains animal products");
-        reasons.push(isVegan 
-          ? "Contains animal-derived ingredients (milk, eggs) - not vegan"
-          : "Contains eggs and dairy");
+      if (
+        mockIngredients.includes("Milk") ||
+        mockIngredients.includes("Eggs")
+      ) {
+        matchedPreferences.push(
+          isVegan ? "Not Vegan" : "Contains animal products",
+        );
+        reasons.push(
+          isVegan
+            ? "Contains animal-derived ingredients (milk, eggs) - not vegan"
+            : "Contains eggs and dairy",
+        );
       }
     }
 
@@ -195,18 +222,28 @@ function generateMockAnalysis(profiles: ProfileInfo[]): AnalysisResult {
       reasons.push("Contains wheat flour - not gluten-free");
     }
 
-    keywords.forEach(keyword => {
+    keywords.forEach((keyword) => {
       const lowerKeyword = keyword.toLowerCase();
-      const matchedIng = mockIngredients.find(ing => 
-        ing.toLowerCase().includes(lowerKeyword) || 
-        lowerKeyword.includes(ing.toLowerCase())
+      const matchedIng = mockIngredients.find(
+        (ing) =>
+          ing.toLowerCase().includes(lowerKeyword) ||
+          lowerKeyword.includes(ing.toLowerCase()),
       );
-      
-      if (matchedIng || lowerKeyword === "msg" || lowerKeyword === "artificial") {
+
+      if (
+        matchedIng ||
+        lowerKeyword === "msg" ||
+        lowerKeyword === "artificial"
+      ) {
         const matchName = matchedIng || keyword;
         matchedKeywords.push(matchName);
         reasons.push(`Contains forbidden ingredient: ${matchName}`);
-        addMatchedIngredient(matchedIngredients, matchName, "keyword", profile.id);
+        addMatchedIngredient(
+          matchedIngredients,
+          matchName,
+          "keyword",
+          profile.id,
+        );
       }
     });
 
@@ -241,9 +278,11 @@ function addMatchedIngredient(
   list: MatchedIngredient[],
   name: string,
   type: "allergen" | "keyword" | "preference",
-  profileId: string
+  profileId: string,
 ) {
-  const existing = list.find(m => m.name.toLowerCase() === name.toLowerCase());
+  const existing = list.find(
+    (m) => m.name.toLowerCase() === name.toLowerCase(),
+  );
   if (existing) {
     if (!existing.profileIds.includes(profileId)) {
       existing.profileIds.push(profileId);
@@ -256,10 +295,11 @@ function addMatchedIngredient(
 export async function analyzeImageWithCloudFunction(
   base64Image: string,
   profileIds: string[],
-  idToken: string
+  idToken: string,
 ): Promise<AnalysisResult> {
-  const CLOUD_FUNCTION_URL = "https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/analyzeImage";
-  
+  const CLOUD_FUNCTION_URL =
+    "https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/analyzeImage";
+
   const response = await fetch(CLOUD_FUNCTION_URL, {
     method: "POST",
     headers: {
@@ -301,24 +341,45 @@ function generateMockMenuAnalysis(): MenuAnalysisResult {
     menu_items: [
       {
         name: "Grilled Chicken Salad",
-        description: "Fresh greens with grilled chicken, cherry tomatoes, and vinaigrette",
+        description:
+          "Fresh greens with grilled chicken, cherry tomatoes, and vinaigrette",
         price: "$14.99",
-        inferred_ingredients: ["chicken", "lettuce", "tomatoes", "olive oil", "vinegar"],
+        inferred_ingredients: [
+          "chicken",
+          "lettuce",
+          "tomatoes",
+          "olive oil",
+          "vinegar",
+        ],
         verdict: "Safe",
-        conflicts: []
+        conflicts: [],
       },
       {
         name: "Pasta Carbonara",
         description: "Creamy pasta with bacon and parmesan",
         price: "$16.99",
-        inferred_ingredients: ["pasta (wheat)", "eggs", "bacon", "parmesan cheese", "cream"],
+        inferred_ingredients: [
+          "pasta (wheat)",
+          "eggs",
+          "bacon",
+          "parmesan cheese",
+          "cream",
+        ],
         verdict: "Unsafe",
         conflicts: [
-          { type: "allergy_risk", conflict: "Wheat/Gluten", detail: "Contains pasta made from wheat flour" },
-          { type: "allergy_risk", conflict: "Dairy", detail: "Contains cream and parmesan cheese" }
-        ]
-      }
-    ]
+          {
+            type: "allergy_risk",
+            conflict: "Wheat/Gluten",
+            detail: "Contains pasta made from wheat flour",
+          },
+          {
+            type: "allergy_risk",
+            conflict: "Dairy",
+            detail: "Contains cream and parmesan cheese",
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -329,7 +390,7 @@ export async function analyzeMenu(
     customAllergies?: string[];
     preferences: string[];
     forbiddenKeywords?: string[];
-  }
+  },
 ): Promise<MenuAnalysisResult> {
   console.log("Analyzing menu with profile:", userProfile);
 
@@ -383,7 +444,7 @@ export interface BarcodeProduct {
 export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
   try {
     const response = await fetch(
-      `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=code,product_name,brands,ingredients_text,allergens_tags,image_url`
+      `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=code,product_name,brands,ingredients_text,allergens_tags,image_url`,
     );
     const data = await response.json();
 
@@ -399,10 +460,13 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
       upc: p.code,
       imageUrl: p.image_url || "",
       ingredients: p.ingredients_text
-        ? p.ingredients_text.split(/[,;]/).map((i: string) => i.trim()).filter(Boolean)
+        ? p.ingredients_text
+            .split(/[,;]/)
+            .map((i: string) => i.trim())
+            .filter(Boolean)
         : [],
       allergens: (p.allergens_tags || []).map((a: string) =>
-        a.replace("en:", "").replace(/-/g, " ").trim()
+        a.replace("en:", "").replace(/-/g, " ").trim(),
       ),
     };
   } catch (error) {
@@ -413,7 +477,7 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct> {
 
 export function analyzeBarcodeProduct(
   product: BarcodeProduct,
-  selectedProfiles: ProfileInfo[]
+  selectedProfiles: ProfileInfo[],
 ): AnalysisResult {
   const ingredients = product.ingredients || [];
   const productAllergens = product.allergens || [];
@@ -430,21 +494,27 @@ export function analyzeBarcodeProduct(
       const lowerAllergen = allergen.toLowerCase();
 
       // Check product allergen tags
-      const tagMatch = productAllergens.find((a) =>
-        a.toLowerCase().includes(lowerAllergen) ||
-        lowerAllergen.includes(a.toLowerCase())
+      const tagMatch = productAllergens.find(
+        (a) =>
+          a.toLowerCase().includes(lowerAllergen) ||
+          lowerAllergen.includes(a.toLowerCase()),
       );
 
       // Check ingredients text
       const ingredientMatch = ingredients.find((ing) =>
-        ing.toLowerCase().includes(lowerAllergen)
+        ing.toLowerCase().includes(lowerAllergen),
       );
 
       if (tagMatch || ingredientMatch) {
         const matchName = tagMatch || ingredientMatch || allergen;
         matchedAllergens.push(matchName);
         reasons.push(`Contains ${matchName} (${allergen} allergen)`);
-        addMatchedIngredient(matchedIngredients, matchName, "allergen", profile.id);
+        addMatchedIngredient(
+          matchedIngredients,
+          matchName,
+          "allergen",
+          profile.id,
+        );
       }
     }
 
@@ -453,7 +523,7 @@ export function analyzeBarcodeProduct(
     for (const keyword of keywords) {
       const lowerKeyword = keyword.toLowerCase();
       const match = ingredients.find((ing) =>
-        ing.toLowerCase().includes(lowerKeyword)
+        ing.toLowerCase().includes(lowerKeyword),
       );
       if (match) {
         matchedKeywords.push(match);

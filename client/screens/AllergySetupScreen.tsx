@@ -216,7 +216,10 @@ export default function AllergySetupScreen() {
             returnKeyType="done"
           />
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: AppColors.primaryDark }]}
+            style={[
+              styles.addButton,
+              { backgroundColor: AppColors.primaryDark },
+            ]}
             onPress={addOtherAllergy}
             activeOpacity={0.7}
           >

@@ -152,11 +152,7 @@ export default function HomeScreen() {
               { backgroundColor: AppColors.info + "20" },
             ]}
           >
-            <Ionicons
-              name="book-outline"
-              size={28}
-              color={AppColors.info}
-            />
+            <Ionicons name="book-outline" size={28} color={AppColors.info} />
           </View>
           <View style={styles.actionContent}>
             <ThemedText style={styles.actionTitle}>Scan Menu</ThemedText>

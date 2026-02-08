@@ -16,8 +16,7 @@ const firebaseConfig = {
   authDomain:
     process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ||
     "appergy-24baa.firebaseapp.com",
-  projectId:
-    process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "appergy-24baa",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "appergy-24baa",
   storageBucket:
     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ||
     "appergy-24baa.firebasestorage.app",
@@ -42,7 +41,7 @@ export const isFirebaseConfigured = Boolean(
   isValidApiKey(firebaseConfig.apiKey) &&
     firebaseConfig.authDomain &&
     firebaseConfig.projectId &&
-    firebaseConfig.appId
+    firebaseConfig.appId,
 );
 
 let app: FirebaseApp | null = null;

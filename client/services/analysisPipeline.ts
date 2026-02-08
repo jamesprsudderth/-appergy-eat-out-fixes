@@ -2,7 +2,7 @@
  * Analysis Pipeline
  *
  * Bridges AI text extraction (OCR) with the deterministic policy engine.
- * 
+ *
  * Flow:
  *   1. AI/OCR extracts raw text from image
  *   2. Ingredient normalizer parses text into structured tokens
@@ -37,7 +37,7 @@ import type {
  */
 export function analyzeIngredientsText(
   rawText: string,
-  profiles: ProfileInfo[]
+  profiles: ProfileInfo[],
 ): AnalysisResult {
   // Step 1: Parse the ingredient label
   const parsedLabel = parseIngredientLabel(rawText);
@@ -72,7 +72,7 @@ export interface EnhancedAnalysisResult extends AnalysisResult {
  */
 export function analyzeIngredientsTextEnhanced(
   rawText: string,
-  profiles: ProfileInfo[]
+  profiles: ProfileInfo[],
 ): EnhancedAnalysisResult {
   const parsedLabel = parseIngredientLabel(rawText);
   const userProfiles = profiles.map(profileInfoToUserProfile);
@@ -86,12 +86,12 @@ export function analyzeIngredientsTextEnhanced(
   }
   if (parsedLabel.ingredients.length < 3) {
     dataQualityFlags.push(
-      "Very few ingredients detected — text may be incomplete"
+      "Very few ingredients detected — text may be incomplete",
     );
   }
   if (parsedLabel.mayContainStatements.length > 0) {
     dataQualityFlags.push(
-      "Label includes 'may contain' warnings — cross-contamination risk"
+      "Label includes 'may contain' warnings — cross-contamination risk",
     );
   }
 
@@ -130,7 +130,7 @@ function profileInfoToUserProfile(profile: ProfileInfo): UserProfile {
  */
 function policyResultsToAnalysisResult(
   parsedLabel: ParsedLabel,
-  policyResults: PolicyResult[]
+  policyResults: PolicyResult[],
 ): AnalysisResult {
   const matchedIngredients: MatchedIngredient[] = [];
 
@@ -150,18 +150,18 @@ function policyResultsToAnalysisResult(
             matchedIngredients,
             finding.matchedText,
             "allergen",
-            pr.profileId
+            pr.profileId,
           );
           break;
         case "DIETARY":
           matchedPreferences.push(
-            `${finding.canonicalTerm}: ${finding.matchedText}`
+            `${finding.canonicalTerm}: ${finding.matchedText}`,
           );
           addMatchedIngredient(
             matchedIngredients,
             finding.matchedText,
             "preference",
-            pr.profileId
+            pr.profileId,
           );
           break;
         case "FORBIDDEN_KEYWORD":
@@ -170,7 +170,7 @@ function policyResultsToAnalysisResult(
             matchedIngredients,
             finding.matchedText,
             "keyword",
-            pr.profileId
+            pr.profileId,
           );
           break;
       }
@@ -212,10 +212,10 @@ function addMatchedIngredient(
   list: MatchedIngredient[],
   name: string,
   type: "allergen" | "keyword" | "preference",
-  profileId: string
+  profileId: string,
 ) {
   const existing = list.find(
-    (m) => m.name.toLowerCase() === name.toLowerCase() && m.type === type
+    (m) => m.name.toLowerCase() === name.toLowerCase() && m.type === type,
   );
   if (existing) {
     if (!existing.profileIds.includes(profileId)) {

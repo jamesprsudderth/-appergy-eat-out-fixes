@@ -130,7 +130,9 @@ function serveExpoManifest(platform: string, req: Request, res: Response) {
   const expoDevPort = process.env.EXPO_DEV_PORT || "8081";
   const expoDevUrl = `http://localhost:${expoDevPort}`;
 
-  log(`No static build found, proxying manifest to Expo dev server at ${expoDevUrl}`);
+  log(
+    `No static build found, proxying manifest to Expo dev server at ${expoDevUrl}`,
+  );
 
   // Forward the request to the Expo dev server
   const proxyUrl = `${expoDevUrl}${req.path}`;
@@ -157,7 +159,8 @@ function serveExpoManifest(platform: string, req: Request, res: Response) {
     .catch((err) => {
       log(`Expo dev server proxy failed: ${err.message}`);
       res.status(404).json({
-        error: `Manifest not found for platform: ${platform}. ` +
+        error:
+          `Manifest not found for platform: ${platform}. ` +
           `Make sure the Expo dev server is running (npm run expo:dev) ` +
           `or build static files first (npm run expo:static:build).`,
       });
@@ -202,7 +205,8 @@ function configureExpoAndLanding(app: express.Application) {
     "landing-page.html",
   );
 
-  let landingPageTemplate = "<html><body><h1>Appergy Server Running</h1><p>Connect via Expo Go.</p></body></html>";
+  let landingPageTemplate =
+    "<html><body><h1>Appergy Server Running</h1><p>Connect via Expo Go.</p></body></html>";
   try {
     landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
   } catch {

@@ -580,76 +580,78 @@ export default function ResultsScreen() {
               >
                 Tap a flagged ingredient to add it to your forbidden keywords
               </ThemedText>
-            <View style={styles.ingredientsContainer}>
-              {analysisResult.ingredients.map((ingredient, index) => {
-                const isMatched = matchedNames.has(ingredient.toLowerCase());
-                const matchInfo = matchedIngredients.find(
-                  (m) => m.name.toLowerCase() === ingredient.toLowerCase(),
-                );
-                const isAllergen = matchInfo?.type === "allergen";
-                const isKeyword = matchInfo?.type === "keyword";
+              <View style={styles.ingredientsContainer}>
+                {analysisResult.ingredients.map((ingredient, index) => {
+                  const isMatched = matchedNames.has(ingredient.toLowerCase());
+                  const matchInfo = matchedIngredients.find(
+                    (m) => m.name.toLowerCase() === ingredient.toLowerCase(),
+                  );
+                  const isAllergen = matchInfo?.type === "allergen";
+                  const isKeyword = matchInfo?.type === "keyword";
 
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.ingredientChip,
-                      isMatched && {
-                        backgroundColor: isAllergen
-                          ? AppColors.destructive + "30"
-                          : isKeyword
-                            ? AppColors.destructive + "20"
-                            : AppColors.warning + "20",
-                        borderWidth: 1,
-                        borderColor:
-                          isAllergen || isKeyword
-                            ? AppColors.destructive
-                            : AppColors.warning,
-                      },
-                    ]}
-                    onPress={() => isMatched && handleAddToKeywords(ingredient)}
-                    disabled={!isMatched}
-                    activeOpacity={isMatched ? 0.7 : 1}
-                  >
-                    {isMatched ? (
-                      <Ionicons
-                        name={
-                          isAllergen || isKeyword ? "alert-circle" : "warning"
-                        }
-                        size={14}
-                        color={
-                          isAllergen || isKeyword
-                            ? AppColors.destructive
-                            : AppColors.warning
-                        }
-                      />
-                    ) : null}
-                    <ThemedText
+                  return (
+                    <TouchableOpacity
+                      key={index}
                       style={[
-                        styles.ingredientText,
+                        styles.ingredientChip,
                         isMatched && {
-                          color:
+                          backgroundColor: isAllergen
+                            ? AppColors.destructive + "30"
+                            : isKeyword
+                              ? AppColors.destructive + "20"
+                              : AppColors.warning + "20",
+                          borderWidth: 1,
+                          borderColor:
                             isAllergen || isKeyword
                               ? AppColors.destructive
                               : AppColors.warning,
-                          fontWeight: "600",
                         },
                       ]}
+                      onPress={() =>
+                        isMatched && handleAddToKeywords(ingredient)
+                      }
+                      disabled={!isMatched}
+                      activeOpacity={isMatched ? 0.7 : 1}
                     >
-                      {ingredient}
-                    </ThemedText>
-                    {isMatched ? (
-                      <Feather
-                        name="plus-circle"
-                        size={14}
-                        color={AppColors.primary}
-                      />
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })}
+                      {isMatched ? (
+                        <Ionicons
+                          name={
+                            isAllergen || isKeyword ? "alert-circle" : "warning"
+                          }
+                          size={14}
+                          color={
+                            isAllergen || isKeyword
+                              ? AppColors.destructive
+                              : AppColors.warning
+                          }
+                        />
+                      ) : null}
+                      <ThemedText
+                        style={[
+                          styles.ingredientText,
+                          isMatched && {
+                            color:
+                              isAllergen || isKeyword
+                                ? AppColors.destructive
+                                : AppColors.warning,
+                            fontWeight: "600",
+                          },
+                        ]}
+                      >
+                        {ingredient}
+                      </ThemedText>
+                      {isMatched ? (
+                        <Feather
+                          name="plus-circle"
+                          size={14}
+                          color={AppColors.primary}
+                        />
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          </View>
           </>
         ) : null}
 

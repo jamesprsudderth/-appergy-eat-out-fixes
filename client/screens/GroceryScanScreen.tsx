@@ -46,7 +46,7 @@ export default function GroceryScanScreen() {
   const { user } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedProduct, setScannedProduct] = useState<GroceryProduct | null>(
-    null
+    null,
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -78,7 +78,7 @@ export default function GroceryScanScreen() {
         "users",
         user.uid,
         "settings",
-        "forbiddenKeywords"
+        "forbiddenKeywords",
       );
       const keywordsSnap = await getDoc(keywordsRef);
       if (keywordsSnap.exists()) {
@@ -141,7 +141,7 @@ export default function GroceryScanScreen() {
               text: "OK",
               onPress: () => setIsProcessing(false),
             },
-          ]
+          ],
         );
         return;
       }
@@ -152,7 +152,7 @@ export default function GroceryScanScreen() {
         product,
         userProfile.allergies,
         userProfile.preferences,
-        userProfile.forbiddenKeywords
+        userProfile.forbiddenKeywords,
       );
 
       const analysisResult = groceryService.toAnalysisResult(product, safety);
@@ -165,7 +165,7 @@ export default function GroceryScanScreen() {
       Alert.alert(
         "Scan Error",
         "Failed to process the barcode. Please try again.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
     } finally {
       setIsProcessing(false);

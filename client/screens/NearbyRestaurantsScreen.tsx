@@ -489,7 +489,10 @@ export default function NearbyRestaurantsScreen() {
       </ThemedText>
       {Platform.OS !== "web" ? (
         <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: AppColors.primaryDark }]}
+          style={[
+            styles.primaryButton,
+            { backgroundColor: AppColors.primaryDark },
+          ]}
           onPress={() => {
             try {
               Linking.openSettings();
@@ -624,29 +627,47 @@ export default function NearbyRestaurantsScreen() {
                   <View style={styles.modalMetaItem}>
                     <Ionicons name="star" size={16} color={AppColors.warning} />
                     <ThemedText style={styles.modalMetaText}>
-                      {selectedRestaurant.rating} ({selectedRestaurant.user_ratings_total || 0} reviews)
+                      {selectedRestaurant.rating} (
+                      {selectedRestaurant.user_ratings_total || 0} reviews)
                     </ThemedText>
                   </View>
                 ) : null}
                 {(selectedRestaurant as any).distance ? (
                   <View style={styles.modalMetaItem}>
-                    <Ionicons name="navigate-outline" size={16} color={AppColors.primary} />
+                    <Ionicons
+                      name="navigate-outline"
+                      size={16}
+                      color={AppColors.primary}
+                    />
                     <ThemedText style={styles.modalMetaText}>
                       {formatDistance((selectedRestaurant as any).distance)}
                     </ThemedText>
                   </View>
                 ) : null}
                 {selectedRestaurant.opening_hours ? (
-                  <View style={[
-                    styles.modalStatusBadge,
-                    { backgroundColor: selectedRestaurant.opening_hours.open_now ? AppColors.success + "20" : AppColors.destructive + "20" },
-                  ]}>
-                    <ThemedText style={{
-                      fontSize: 12,
-                      fontWeight: "600",
-                      color: selectedRestaurant.opening_hours.open_now ? AppColors.success : AppColors.destructive,
-                    }}>
-                      {selectedRestaurant.opening_hours.open_now ? "Open Now" : "Closed"}
+                  <View
+                    style={[
+                      styles.modalStatusBadge,
+                      {
+                        backgroundColor: selectedRestaurant.opening_hours
+                          .open_now
+                          ? AppColors.success + "20"
+                          : AppColors.destructive + "20",
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "600",
+                        color: selectedRestaurant.opening_hours.open_now
+                          ? AppColors.success
+                          : AppColors.destructive,
+                      }}
+                    >
+                      {selectedRestaurant.opening_hours.open_now
+                        ? "Open Now"
+                        : "Closed"}
                     </ThemedText>
                   </View>
                 ) : null}
@@ -655,7 +676,10 @@ export default function NearbyRestaurantsScreen() {
 
             <View style={styles.modalQuickActions}>
               <TouchableOpacity
-                style={[styles.quickActionButton, { backgroundColor: AppColors.surface }]}
+                style={[
+                  styles.quickActionButton,
+                  { backgroundColor: AppColors.surface },
+                ]}
                 onPress={() => {
                   if (!selectedRestaurant) return;
                   const { lat, lng } = selectedRestaurant.geometry.location;
@@ -669,21 +693,32 @@ export default function NearbyRestaurantsScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons name="navigate" size={20} color={AppColors.primary} />
-                <ThemedText style={[styles.quickActionText, { color: AppColors.primary }]}>
+                <ThemedText
+                  style={[styles.quickActionText, { color: AppColors.primary }]}
+                >
                   Directions
                 </ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.quickActionButton, { backgroundColor: AppColors.surface }]}
+                style={[
+                  styles.quickActionButton,
+                  { backgroundColor: AppColors.surface },
+                ]}
                 onPress={() => {
                   if (!selectedRestaurant) return;
-                  const query = encodeURIComponent(selectedRestaurant.name + " " + (selectedRestaurant.vicinity || ""));
+                  const query = encodeURIComponent(
+                    selectedRestaurant.name +
+                      " " +
+                      (selectedRestaurant.vicinity || ""),
+                  );
                   Linking.openURL(`https://www.google.com/search?q=${query}`);
                 }}
                 activeOpacity={0.7}
               >
                 <Ionicons name="call" size={20} color={AppColors.primary} />
-                <ThemedText style={[styles.quickActionText, { color: AppColors.primary }]}>
+                <ThemedText
+                  style={[styles.quickActionText, { color: AppColors.primary }]}
+                >
                   Contact
                 </ThemedText>
               </TouchableOpacity>

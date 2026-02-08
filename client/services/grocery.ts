@@ -30,7 +30,7 @@ class GroceryService {
   async searchProducts(query: string): Promise<GroceryProduct[]> {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/grocery/search?q=${encodeURIComponent(query)}`
+        `${API_BASE_URL}/api/grocery/search?q=${encodeURIComponent(query)}`,
       );
       if (response.ok) {
         return await response.json();
@@ -42,7 +42,7 @@ class GroceryService {
     // Fallback: direct Open Food Facts call
     try {
       const response = await fetch(
-        `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,brands,ingredients_text,allergens_tags,image_url&page_size=20`
+        `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,brands,ingredients_text,allergens_tags,image_url&page_size=20`,
       );
       const data = await response.json();
 
@@ -59,7 +59,7 @@ class GroceryService {
               .filter(Boolean)
           : [],
         allergens: (p.allergens_tags || []).map((a: string) =>
-          a.replace("en:", "").replace(/-/g, " ").trim()
+          a.replace("en:", "").replace(/-/g, " ").trim(),
         ),
         prices: [],
       }));
@@ -72,7 +72,7 @@ class GroceryService {
   async getProductByUPC(upc: string): Promise<GroceryProduct | null> {
     try {
       const response = await fetch(
-        `https://world.openfoodfacts.org/api/v2/product/${upc}?fields=code,product_name,brands,ingredients_text,allergens_tags,image_url,nutriments`
+        `https://world.openfoodfacts.org/api/v2/product/${upc}?fields=code,product_name,brands,ingredients_text,allergens_tags,image_url,nutriments`,
       );
       const data = await response.json();
 
@@ -92,7 +92,7 @@ class GroceryService {
               .filter(Boolean)
           : [],
         allergens: (p.allergens_tags || []).map((a: string) =>
-          a.replace("en:", "").replace(/-/g, " ").trim()
+          a.replace("en:", "").replace(/-/g, " ").trim(),
         ),
         nutritionFacts: p.nutriments,
         prices: [],
@@ -107,7 +107,7 @@ class GroceryService {
     product: GroceryProduct,
     allergies: string[],
     preferences: string[],
-    forbiddenKeywords: string[]
+    forbiddenKeywords: string[],
   ): SafetyCheck {
     const warnings: string[] = [];
     const conflicts: string[] = [];
@@ -128,7 +128,7 @@ class GroceryService {
     for (const keyword of forbiddenKeywords) {
       const lower = keyword.toLowerCase();
       const found = product.ingredients.some((i) =>
-        i.toLowerCase().includes(lower)
+        i.toLowerCase().includes(lower),
       );
       if (found) {
         conflicts.push(`Contains forbidden ingredient: ${keyword}`);

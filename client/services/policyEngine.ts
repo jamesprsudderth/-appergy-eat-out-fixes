@@ -13,15 +13,9 @@
  * Principle: Prefer false positive (CAUTION) over false negative (SAFE).
  */
 
-import {
-  ALLERGEN_SYNONYM_MAP,
-  CanonicalAllergen,
-} from "./allergenDatabase";
+import { ALLERGEN_SYNONYM_MAP, CanonicalAllergen } from "./allergenDatabase";
 import { DIETARY_RULES, DietaryRule } from "./dietaryDatabase";
-import {
-  ParsedLabel,
-  findEvidenceSpans,
-} from "./ingredientNormalizer";
+import { ParsedLabel, findEvidenceSpans } from "./ingredientNormalizer";
 
 // ─── Types ───
 
@@ -88,7 +82,7 @@ export interface UserProfile {
  */
 export function evaluateLabel(
   parsedLabel: ParsedLabel,
-  profile: UserProfile
+  profile: UserProfile,
 ): PolicyResult {
   const findings: Finding[] = [];
   const rawText = parsedLabel.normalizedText;
@@ -98,7 +92,11 @@ export function evaluateLabel(
   findings.push(...allergenFindings);
 
   // 2. Check dietary preferences
-  const dietaryFindings = checkDietaryPreferences(parsedLabel, profile, rawText);
+  const dietaryFindings = checkDietaryPreferences(
+    parsedLabel,
+    profile,
+    rawText,
+  );
   findings.push(...dietaryFindings);
 
   // 3. Check forbidden keywords
@@ -115,9 +113,7 @@ export function evaluateLabel(
 
   // Confidence is the minimum across all findings (or 1.0 if no findings)
   const confidence =
-    findings.length > 0
-      ? Math.min(...findings.map((f) => f.confidence))
-      : 1.0;
+    findings.length > 0 ? Math.min(...findings.map((f) => f.confidence)) : 1.0;
 
   return {
     status,
@@ -136,7 +132,7 @@ export function evaluateLabel(
  */
 export function evaluateLabelForProfiles(
   parsedLabel: ParsedLabel,
-  profiles: UserProfile[]
+  profiles: UserProfile[],
 ): PolicyResult[] {
   return profiles.map((profile) => evaluateLabel(parsedLabel, profile));
 }
@@ -146,7 +142,7 @@ export function evaluateLabelForProfiles(
 function checkAllergens(
   parsedLabel: ParsedLabel,
   profile: UserProfile,
-  rawText: string
+  rawText: string,
 ): Finding[] {
   const findings: Finding[] = [];
   const allAllergies = [
@@ -160,19 +156,24 @@ function checkAllergens(
   // substrings but are NOT actually that allergen.
   const FALSE_POSITIVE_EXCLUSIONS: Record<string, string[]> = {
     // "butter" is dairy, but these are NOT dairy:
-    "Milk": [
-      "cocoa butter", "shea butter", "mango butter", "kokum butter",
-      "peanut butter", "almond butter", "cashew butter", "sunflower butter",
-      "nut butter", "seed butter", "soy butter", "coconut butter",
+    Milk: [
+      "cocoa butter",
+      "shea butter",
+      "mango butter",
+      "kokum butter",
+      "peanut butter",
+      "almond butter",
+      "cashew butter",
+      "sunflower butter",
+      "nut butter",
+      "seed butter",
+      "soy butter",
+      "coconut butter",
     ],
     // "lecithin" maps to Soy, but sunflower lecithin is soy-free:
-    "Soy": [
-      "sunflower lecithin",
-    ],
+    Soy: ["sunflower lecithin"],
     // "livetin" is an egg protein, but "live" (as in "live cultures") is not:
-    "Eggs": [
-      "live and active cultures", "live cultures", "live active cultures",
-    ],
+    Eggs: ["live and active cultures", "live cultures", "live active cultures"],
   };
 
   /**
@@ -185,9 +186,7 @@ function checkAllergens(
   }
 
   // Build a set of canonical allergens the user has
-  const userAllergenSet = new Set(
-    allAllergies.map((a) => a.toLowerCase())
-  );
+  const userAllergenSet = new Set(allAllergies.map((a) => a.toLowerCase()));
 
   // Check each ingredient against the synonym map
   for (const ingredient of parsedLabel.ingredients) {
@@ -237,7 +236,7 @@ function checkAllergens(
         (f) =>
           f.kind === "ALLERGEN" &&
           f.canonicalTerm === allergen &&
-          f.matchedText === ingredient
+          f.matchedText === ingredient,
       );
       if (alreadyFound) continue;
 
@@ -258,14 +257,9 @@ function checkAllergens(
     // Direct allergen name match (for custom allergies not in synonym map)
     for (const allergen of allAllergies) {
       const lowerAllergen = allergen.toLowerCase();
-      if (
-        lower.includes(lowerAllergen) ||
-        lowerAllergen.includes(lower)
-      ) {
+      if (lower.includes(lowerAllergen) || lowerAllergen.includes(lower)) {
         const alreadyFound = findings.some(
-          (f) =>
-            f.kind === "ALLERGEN" &&
-            f.matchedText === ingredient
+          (f) => f.kind === "ALLERGEN" && f.matchedText === ingredient,
         );
         if (alreadyFound) continue;
 
@@ -295,7 +289,7 @@ function checkAllergens(
         const alreadyFound = findings.some(
           (f) =>
             f.kind === "ALLERGEN" &&
-            f.canonicalTerm.toLowerCase() === lowerAllergen
+            f.canonicalTerm.toLowerCase() === lowerAllergen,
         );
         if (alreadyFound) continue;
 
@@ -326,13 +320,11 @@ function checkAllergens(
           (f) =>
             f.kind === "ALLERGEN" &&
             f.canonicalTerm.toLowerCase() === lowerAllergen &&
-            f.source === "may_contain"
+            f.source === "may_contain",
         );
         if (alreadyFound) continue;
 
-        const severity = profile.treatMayContainAsUnsafe
-          ? "UNSAFE"
-          : "CAUTION";
+        const severity = profile.treatMayContainAsUnsafe ? "UNSAFE" : "CAUTION";
         const spans = findEvidenceSpans(rawText, statement);
         findings.push({
           kind: "ALLERGEN",
@@ -356,7 +348,7 @@ function checkAllergens(
 function checkDietaryPreferences(
   parsedLabel: ParsedLabel,
   profile: UserProfile,
-  rawText: string
+  rawText: string,
 ): Finding[] {
   const findings: Finding[] = [];
   const allPreferences = [
@@ -368,16 +360,34 @@ function checkDietaryPreferences(
 
   // Known plant-based "butter" and "milk" terms that are NOT animal-derived
   const PLANT_BASED_EXCEPTIONS = [
-    "cocoa butter", "shea butter", "mango butter", "kokum butter",
-    "peanut butter", "almond butter", "cashew butter", "sunflower butter",
-    "nut butter", "seed butter", "coconut butter", "soy butter",
-    "almond milk", "oat milk", "soy milk", "coconut milk", "rice milk",
-    "cashew milk", "hemp milk",
-    "coconut cream", "coconut oil",
+    "cocoa butter",
+    "shea butter",
+    "mango butter",
+    "kokum butter",
+    "peanut butter",
+    "almond butter",
+    "cashew butter",
+    "sunflower butter",
+    "nut butter",
+    "seed butter",
+    "coconut butter",
+    "soy butter",
+    "almond milk",
+    "oat milk",
+    "soy milk",
+    "coconut milk",
+    "rice milk",
+    "cashew milk",
+    "hemp milk",
+    "coconut cream",
+    "coconut oil",
     "sunflower lecithin",
   ];
 
-  function isPlantBasedException(ingredientLower: string, violationTerm: string): boolean {
+  function isPlantBasedException(
+    ingredientLower: string,
+    violationTerm: string,
+  ): boolean {
     // Only applies to terms like "butter", "milk", "cream", "lecithin"
     const ambiguousTerms = ["butter", "milk", "cream", "lecithin", "ice cream"];
     if (!ambiguousTerms.includes(violationTerm)) return false;
@@ -402,32 +412,33 @@ function checkDietaryPreferences(
           lower.length >= 3 &&
           Math.abs(violationTerm.length - lower.length) <= 4;
 
-        if (!ingredientContainsViolation && !violationContainsIngredient) continue;
+        if (!ingredientContainsViolation && !violationContainsIngredient)
+          continue;
 
         // Skip known plant-based exceptions
         if (isPlantBasedException(lower, violationTerm)) continue;
 
-          const alreadyFound = findings.some(
-            (f) =>
-              f.kind === "DIETARY" &&
-              f.canonicalTerm === rule.label &&
-              f.matchedText === ingredient
-          );
-          if (alreadyFound) continue;
+        const alreadyFound = findings.some(
+          (f) =>
+            f.kind === "DIETARY" &&
+            f.canonicalTerm === rule.label &&
+            f.matchedText === ingredient,
+        );
+        if (alreadyFound) continue;
 
-          const spans = findEvidenceSpans(rawText, ingredient);
-          findings.push({
-            kind: "DIETARY",
-            severity: "UNSAFE",
-            matchedText: ingredient,
-            canonicalTerm: rule.label,
-            reason: `"${ingredient}" is ${rule.reasonTemplate} — violates ${rule.label} preference`,
-            evidenceSpans: spans,
-            source: "ingredients",
-            confidence: 0.95,
-          });
-          break;
-        }
+        const spans = findEvidenceSpans(rawText, ingredient);
+        findings.push({
+          kind: "DIETARY",
+          severity: "UNSAFE",
+          matchedText: ingredient,
+          canonicalTerm: rule.label,
+          reason: `"${ingredient}" is ${rule.reasonTemplate} — violates ${rule.label} preference`,
+          evidenceSpans: spans,
+          source: "ingredients",
+          confidence: 0.95,
+        });
+        break;
+      }
 
       // Check caution terms → CAUTION
       for (const cautionTerm of rule.cautionTerms) {
@@ -439,26 +450,26 @@ function checkDietaryPreferences(
 
         if (!ingContainsCaution && !cautionContainsIng) continue;
 
-          const alreadyFound = findings.some(
-            (f) =>
-              f.kind === "DIETARY" &&
-              f.canonicalTerm === rule.label &&
-              f.matchedText === ingredient
-          );
-          if (alreadyFound) continue;
+        const alreadyFound = findings.some(
+          (f) =>
+            f.kind === "DIETARY" &&
+            f.canonicalTerm === rule.label &&
+            f.matchedText === ingredient,
+        );
+        if (alreadyFound) continue;
 
-          const spans = findEvidenceSpans(rawText, ingredient);
-          findings.push({
-            kind: "DIETARY",
-            severity: "CAUTION",
-            matchedText: ingredient,
-            canonicalTerm: rule.label,
-            reason: `"${ingredient}" may be ${rule.reasonTemplate} — check if compatible with ${rule.label}`,
-            evidenceSpans: spans,
-            source: "ingredients",
-            confidence: 0.6,
-          });
-          break;
+        const spans = findEvidenceSpans(rawText, ingredient);
+        findings.push({
+          kind: "DIETARY",
+          severity: "CAUTION",
+          matchedText: ingredient,
+          canonicalTerm: rule.label,
+          reason: `"${ingredient}" may be ${rule.reasonTemplate} — check if compatible with ${rule.label}`,
+          evidenceSpans: spans,
+          source: "ingredients",
+          confidence: 0.6,
+        });
+        break;
       }
     }
   }
@@ -471,7 +482,7 @@ function checkDietaryPreferences(
 function checkForbiddenKeywords(
   parsedLabel: ParsedLabel,
   profile: UserProfile,
-  rawText: string
+  rawText: string,
 ): Finding[] {
   const findings: Finding[] = [];
   const keywords = profile.forbiddenKeywords || [];
@@ -506,7 +517,7 @@ function checkForbiddenKeywords(
       const alreadyFound = findings.some(
         (f) =>
           f.kind === "FORBIDDEN_KEYWORD" &&
-          f.canonicalTerm.toLowerCase() === lowerKeyword
+          f.canonicalTerm.toLowerCase() === lowerKeyword,
       );
       if (!alreadyFound) {
         const spans = findEvidenceSpans(rawText, keyword);

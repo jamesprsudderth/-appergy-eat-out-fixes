@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
@@ -111,7 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await loadUserProfile(firebaseUser.uid);
         } else {
           // Check if we have a demo user stored
-          const storedDemoMode = await AsyncStorage.getItem(STORAGE_KEYS.IS_DEMO_MODE);
+          const storedDemoMode = await AsyncStorage.getItem(
+            STORAGE_KEYS.IS_DEMO_MODE,
+          );
           if (storedDemoMode === "true") {
             setUser(DEMO_USER);
             setUserProfile(demoProfile);
@@ -133,11 +141,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadPersistedState = async () => {
     try {
-      const [storedOnboarded, storedDemoMode, storedProfile] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED),
-        AsyncStorage.getItem(STORAGE_KEYS.IS_DEMO_MODE),
-        AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE),
-      ]);
+      const [storedOnboarded, storedDemoMode, storedProfile] =
+        await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED),
+          AsyncStorage.getItem(STORAGE_KEYS.IS_DEMO_MODE),
+          AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE),
+        ]);
 
       if (storedOnboarded === "true") {
         setIsOnboardedState(true);
@@ -161,8 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadDemoModeState = async () => {
     try {
-      const storedDemoMode = await AsyncStorage.getItem(STORAGE_KEYS.IS_DEMO_MODE);
-      const storedOnboarded = await AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED);
+      const storedDemoMode = await AsyncStorage.getItem(
+        STORAGE_KEYS.IS_DEMO_MODE,
+      );
+      const storedOnboarded = await AsyncStorage.getItem(
+        STORAGE_KEYS.IS_ONBOARDED,
+      );
 
       if (storedDemoMode === "true") {
         setUser(DEMO_USER);
@@ -180,7 +193,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUserProfile = async (userId: string) => {
     if (!db || !isFirebaseConfigured) {
       // Check local storage as fallback
-      const storedOnboarded = await AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED);
+      const storedOnboarded = await AsyncStorage.getItem(
+        STORAGE_KEYS.IS_ONBOARDED,
+      );
       setIsOnboardedState(storedOnboarded === "true");
       return;
     }
@@ -192,7 +207,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Load forbidden keywords
       let forbiddenKeywords: string[] = [];
       try {
-        const keywordsDoc = await getDoc(doc(db, "users", userId, "settings", "forbiddenKeywords"));
+        const keywordsDoc = await getDoc(
+          doc(db, "users", userId, "settings", "forbiddenKeywords"),
+        );
         if (keywordsDoc.exists()) {
           forbiddenKeywords = keywordsDoc.data().keywords || [];
         }
@@ -222,27 +239,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserProfile(profile);
 
         // Cache profile locally
-        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.USER_PROFILE,
+          JSON.stringify(profile),
+        );
 
         // Check onboarding status
-        const hasAllergies = profile.allergies.common.length > 0 ||
-                            profile.allergies.custom.length > 0 ||
-                            profile.allergies.none === true;
-        const hasPreferences = profile.preferences.common.length > 0 ||
-                              profile.preferences.custom.length > 0 ||
-                              profile.preferences.none === true;
+        const hasAllergies =
+          profile.allergies.common.length > 0 ||
+          profile.allergies.custom.length > 0 ||
+          profile.allergies.none === true;
+        const hasPreferences =
+          profile.preferences.common.length > 0 ||
+          profile.preferences.custom.length > 0 ||
+          profile.preferences.none === true;
 
         const hasCompletedOnboarding = hasAllergies && hasPreferences;
         setIsOnboardedState(hasCompletedOnboarding);
 
         await AsyncStorage.setItem(
           STORAGE_KEYS.IS_ONBOARDED,
-          hasCompletedOnboarding ? "true" : "false"
+          hasCompletedOnboarding ? "true" : "false",
         );
 
         console.log("User profile loaded:", {
-          allergies: profile.allergies.common.length + profile.allergies.custom.length,
-          preferences: profile.preferences.common.length + profile.preferences.custom.length,
+          allergies:
+            profile.allergies.common.length + profile.allergies.custom.length,
+          preferences:
+            profile.preferences.common.length +
+            profile.preferences.custom.length,
           onboarded: hasCompletedOnboarding,
         });
       } else {
@@ -253,10 +278,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error loading user profile:", error);
       // Fall back to local storage
-      const storedOnboarded = await AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED);
+      const storedOnboarded = await AsyncStorage.getItem(
+        STORAGE_KEYS.IS_ONBOARDED,
+      );
       setIsOnboardedState(storedOnboarded === "true");
 
-      const storedProfile = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+      const storedProfile = await AsyncStorage.getItem(
+        STORAGE_KEYS.USER_PROFILE,
+      );
       if (storedProfile) {
         try {
           setUserProfile(JSON.parse(storedProfile));
@@ -270,7 +299,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setIsOnboarded = useCallback(async (value: boolean) => {
     setIsOnboardedState(value);
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, value ? "true" : "false");
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.IS_ONBOARDED,
+        value ? "true" : "false",
+      );
     } catch (error) {
       console.error("Error persisting onboarded state:", error);
     }
@@ -351,7 +383,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_PROFILE,
-          JSON.stringify(profile)
+          JSON.stringify(profile),
         );
       } catch (error) {
         console.error("Error caching profile:", error);
@@ -379,17 +411,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 updatedAt: new Date().toISOString(),
               },
             },
-            { merge: true }
+            { merge: true },
           );
 
           // Save forbidden keywords separately
-          if (profile.forbiddenKeywords && profile.forbiddenKeywords.length > 0) {
+          if (
+            profile.forbiddenKeywords &&
+            profile.forbiddenKeywords.length > 0
+          ) {
             const keywordsRef = doc(
               db,
               "users",
               user.uid,
               "settings",
-              "forbiddenKeywords"
+              "forbiddenKeywords",
             );
             await setDoc(keywordsRef, {
               keywords: profile.forbiddenKeywords,
@@ -417,7 +452,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem(STORAGE_KEYS.IS_ONBOARDED, "true");
       }
     },
-    [user, isDemoMode]
+    [user, isDemoMode],
   );
 
   return (

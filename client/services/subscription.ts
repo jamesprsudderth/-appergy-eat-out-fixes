@@ -55,13 +55,13 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
 
 export function canAddFamilyMember(
   currentCount: number,
-  subscription: SubscriptionInfo
+  subscription: SubscriptionInfo,
 ): boolean {
   return currentCount < subscription.maxProfiles;
 }
 
 export async function purchaseSubscription(
-  _tier: "individual" | "family"
+  _tier: "individual" | "family",
 ): Promise<boolean> {
   // TODO: RevenueCat purchase flow
   console.log("Subscription purchase not yet implemented");

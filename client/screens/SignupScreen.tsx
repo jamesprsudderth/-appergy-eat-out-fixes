@@ -117,7 +117,7 @@ export default function SignupScreen() {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email.trim().toLowerCase(),
-        data.password
+        data.password,
       );
       const user = userCredential.user;
 
@@ -130,7 +130,7 @@ export default function SignupScreen() {
             createdAt: new Date().toISOString(),
             signupMethod: "email",
           },
-          { merge: true }
+          { merge: true },
         );
       }
 
@@ -195,7 +195,9 @@ export default function SignupScreen() {
               size={16}
               color={AppColors.destructive}
             />
-            <ThemedText style={styles.errorText}>{errors.root.message}</ThemedText>
+            <ThemedText style={styles.errorText}>
+              {errors.root.message}
+            </ThemedText>
           </View>
         )}
       </View>
@@ -212,7 +214,9 @@ export default function SignupScreen() {
             <Feather
               name="mail"
               size={20}
-              color={errors.email ? AppColors.destructive : AppColors.secondaryText}
+              color={
+                errors.email ? AppColors.destructive : AppColors.secondaryText
+              }
               style={styles.inputIcon}
             />
             <Controller
@@ -237,7 +241,9 @@ export default function SignupScreen() {
             />
           </View>
           {errors.email && (
-            <ThemedText style={styles.fieldError}>{errors.email.message}</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              {errors.email.message}
+            </ThemedText>
           )}
         </View>
 
@@ -252,7 +258,11 @@ export default function SignupScreen() {
             <Feather
               name="lock"
               size={20}
-              color={errors.password ? AppColors.destructive : AppColors.secondaryText}
+              color={
+                errors.password
+                  ? AppColors.destructive
+                  : AppColors.secondaryText
+              }
               style={styles.inputIcon}
             />
             <Controller
@@ -286,7 +296,9 @@ export default function SignupScreen() {
             </TouchableOpacity>
           </View>
           {errors.password && (
-            <ThemedText style={styles.fieldError}>{errors.password.message}</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              {errors.password.message}
+            </ThemedText>
           )}
         </View>
 
@@ -301,7 +313,11 @@ export default function SignupScreen() {
             <Feather
               name="lock"
               size={20}
-              color={errors.confirmPassword ? AppColors.destructive : AppColors.secondaryText}
+              color={
+                errors.confirmPassword
+                  ? AppColors.destructive
+                  : AppColors.secondaryText
+              }
               style={styles.inputIcon}
             />
             <Controller
@@ -324,7 +340,9 @@ export default function SignupScreen() {
             />
           </View>
           {errors.confirmPassword && (
-            <ThemedText style={styles.fieldError}>{errors.confirmPassword.message}</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              {errors.confirmPassword.message}
+            </ThemedText>
           )}
         </View>
 
@@ -370,11 +388,7 @@ export default function SignupScreen() {
           disabled={isLoading}
           style={styles.signupButton}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            "Create Account"
-          )}
+          {isLoading ? <ActivityIndicator color="#fff" /> : "Create Account"}
         </Button>
 
         <View style={styles.loginContainer}>

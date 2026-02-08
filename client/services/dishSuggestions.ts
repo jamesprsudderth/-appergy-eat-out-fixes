@@ -11,7 +11,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
 export async function getSafeDishSuggestions(
   restaurantName: string,
   allergies: string[],
-  preferences: string[]
+  preferences: string[],
 ): Promise<string[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/dish-suggestions`, {
@@ -38,14 +38,16 @@ export async function getSafeDishSuggestions(
 
 function getLocalSuggestions(
   allergies: string[],
-  preferences: string[]
+  preferences: string[],
 ): string[] {
   const allergiesStr = allergies.join(" ").toLowerCase();
   const preferencesStr = preferences.join(" ").toLowerCase();
   const isVegetarian = preferencesStr.includes("vegetarian");
   const isVegan = preferencesStr.includes("vegan");
-  const hasGluten = allergiesStr.includes("gluten") || allergiesStr.includes("wheat");
-  const hasDairy = allergiesStr.includes("dairy") || allergiesStr.includes("milk");
+  const hasGluten =
+    allergiesStr.includes("gluten") || allergiesStr.includes("wheat");
+  const hasDairy =
+    allergiesStr.includes("dairy") || allergiesStr.includes("milk");
 
   if (isVegan) {
     return [
@@ -67,7 +69,7 @@ function getLocalSuggestions(
     ];
     if (hasDairy) {
       return suggestions.map((s) =>
-        s.replace(/mozzarella|ricotta|feta|cheese/gi, "dairy-free alternative")
+        s.replace(/mozzarella|ricotta|feta|cheese/gi, "dairy-free alternative"),
       );
     }
     return suggestions;

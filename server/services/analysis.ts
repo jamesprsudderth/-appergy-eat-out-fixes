@@ -57,7 +57,7 @@ interface OCRResult {
 
 export async function extractTextFromImage(
   base64Image: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<OCRResult> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -155,7 +155,7 @@ function toUserProfile(p: ProfileInfo): UserProfile {
  */
 export function analyzeExtractedText(
   rawText: string,
-  profiles: ProfileInfo[]
+  profiles: ProfileInfo[],
 ): AnalysisResult {
   // Parse the raw text into structured tokens
   const parsedLabel = parseIngredientLabel(rawText);
@@ -185,17 +185,17 @@ export function analyzeExtractedText(
           matchedIngredients,
           finding.matchedText,
           "allergen",
-          pr.profileId
+          pr.profileId,
         );
       } else if (finding.kind === "DIETARY") {
         matchedPreferences.push(
-          `${finding.canonicalTerm}: ${finding.matchedText}`
+          `${finding.canonicalTerm}: ${finding.matchedText}`,
         );
         addMatchedIngredient(
           matchedIngredients,
           finding.matchedText,
           "preference",
-          pr.profileId
+          pr.profileId,
         );
       } else if (finding.kind === "FORBIDDEN_KEYWORD") {
         matchedKeywords.push(finding.matchedText);
@@ -203,7 +203,7 @@ export function analyzeExtractedText(
           matchedIngredients,
           finding.matchedText,
           "keyword",
-          pr.profileId
+          pr.profileId,
         );
       }
     }
@@ -239,10 +239,10 @@ function addMatchedIngredient(
   list: MatchedIngredient[],
   name: string,
   type: "allergen" | "keyword" | "preference",
-  profileId: string
+  profileId: string,
 ) {
   const existing = list.find(
-    (m) => m.name.toLowerCase() === name.toLowerCase() && m.type === type
+    (m) => m.name.toLowerCase() === name.toLowerCase() && m.type === type,
   );
   if (existing) {
     if (!existing.profileIds.includes(profileId)) {
@@ -262,7 +262,7 @@ function addMatchedIngredient(
 export async function analyzeImageFull(
   base64Image: string,
   profiles: ProfileInfo[],
-  apiKey: string
+  apiKey: string,
 ): Promise<AnalysisResult> {
   // Phase 1: OCR
   const ocr = await extractTextFromImage(base64Image, apiKey);
@@ -292,10 +292,7 @@ export async function analyzeImageFull(
 
   // Reconstruct full label text including Contains/May contain
   let fullText = ocr.raw_text;
-  if (
-    ocr.contains_statement &&
-    !fullText.toLowerCase().includes("contains:")
-  ) {
+  if (ocr.contains_statement && !fullText.toLowerCase().includes("contains:")) {
     fullText += `\nContains: ${ocr.contains_statement}`;
   }
   if (
@@ -312,12 +309,12 @@ export async function analyzeImageFull(
   const warnings: string[] = [];
   if (ocr.confidence === "low") {
     warnings.push(
-      "Low confidence in text extraction. Some ingredients may have been misread."
+      "Low confidence in text extraction. Some ingredients may have been misread.",
     );
   }
   if (ocr.confidence === "medium") {
     warnings.push(
-      "Some text was partially unclear. Please verify the results."
+      "Some text was partially unclear. Please verify the results.",
     );
   }
   if (ocr.notes) {

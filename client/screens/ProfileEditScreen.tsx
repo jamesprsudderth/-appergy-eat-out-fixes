@@ -207,9 +207,7 @@ export default function ProfileEditScreen() {
     const trimmed = keywordInput.trim();
     if (
       trimmed &&
-      !forbiddenKeywords.some(
-        (k) => k.toLowerCase() === trimmed.toLowerCase(),
-      )
+      !forbiddenKeywords.some((k) => k.toLowerCase() === trimmed.toLowerCase())
     ) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setForbiddenKeywords((prev) => [...prev, trimmed]);
@@ -359,7 +357,10 @@ export default function ProfileEditScreen() {
             returnKeyType="done"
           />
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: AppColors.primaryDark }]}
+            style={[
+              styles.addButton,
+              { backgroundColor: AppColors.primaryDark },
+            ]}
             onPress={addCustomAllergy}
             activeOpacity={0.7}
           >
@@ -466,7 +467,10 @@ export default function ProfileEditScreen() {
             returnKeyType="done"
           />
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: AppColors.primaryDark }]}
+            style={[
+              styles.addButton,
+              { backgroundColor: AppColors.primaryDark },
+            ]}
             onPress={addCustomPreference}
             activeOpacity={0.7}
           >

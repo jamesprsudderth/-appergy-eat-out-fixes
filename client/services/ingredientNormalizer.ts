@@ -53,15 +53,13 @@ export function parseIngredientLabel(rawText: string): ParsedLabel {
 }
 
 function normalizeText(text: string): string {
-  return (
-    text
-      .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
-      .replace(/[''`]/g, "'")
-      .replace(/[""]/g, '"')
-      .replace(/[–—]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
+  return text
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
+    .replace(/[''`]/g, "'")
+    .replace(/[""]/g, '"')
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 interface SectionResult {
@@ -148,10 +146,7 @@ function detectSections(text: string): SectionResult {
   return result;
 }
 
-function findNextSectionStart(
-  lowerText: string,
-  after: number
-): number | null {
+function findNextSectionStart(lowerText: string, after: number): number | null {
   const pattern =
     /[.;]?\s*\b(ingredients|contains|may contain|allergen|nutrition facts|serving size|calories|distributed by|manufactured by)\s*[:]/g;
 
@@ -185,11 +180,11 @@ function expandParentheticals(text: string): string {
   let result = text;
   result = result.replace(
     /([^,(]+?)\s*\(([^)]+)\)/g,
-    (_match, parent, inside) => `${parent.trim()}, ${inside}`
+    (_match, parent, inside) => `${parent.trim()}, ${inside}`,
   );
   result = result.replace(
     /([^,[\]]+?)\s*\[([^\]]+)\]/g,
-    (_match, parent, inside) => `${parent.trim()}, ${inside}`
+    (_match, parent, inside) => `${parent.trim()}, ${inside}`,
   );
   return result;
 }
@@ -218,7 +213,7 @@ function splitSimpleList(text: string): string[] {
  */
 export function findEvidenceSpans(
   rawText: string,
-  searchTerm: string
+  searchTerm: string,
 ): { start: number; end: number }[] {
   const spans: { start: number; end: number }[] = [];
   const lowerText = rawText.toLowerCase();
