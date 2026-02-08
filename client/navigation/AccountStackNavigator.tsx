@@ -7,6 +7,7 @@ import FamilyProfilesScreen from "@/screens/FamilyProfilesScreen";
 import KeywordManagerScreen from "@/screens/KeywordManagerScreen";
 import TermsOfServiceScreen from "@/screens/TermsOfServiceScreen";
 import RecipesHistoryScreen from "@/screens/RecipesHistoryScreen";
+import AlertsScreen from "@/screens/AlertsScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { AppColors } from "@/constants/colors";
@@ -18,6 +19,7 @@ export type AccountStackParamList = {
   KeywordManager: undefined;
   TermsOfService: undefined;
   RecipesHistory: undefined;
+  Alerts: undefined;
 };
 
 const Stack = createNativeStackNavigator<AccountStackParamList>();
@@ -77,6 +79,14 @@ export default function AccountStackNavigator() {
         component={RecipesHistoryScreen}
         options={{
           title: "My Saved Recipes",
+          headerLeft: () => <HeaderBackButton />,
+        }}
+      />
+      <Stack.Screen
+        name="Alerts"
+        component={AlertsScreen}
+        options={{
+          title: "Allergen Alerts",
           headerLeft: () => <HeaderBackButton />,
         }}
       />

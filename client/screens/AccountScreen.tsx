@@ -342,6 +342,43 @@ export default function AccountScreen() {
         />
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={[styles.keywordsCard, { backgroundColor: AppColors.surface }]}
+        onPress={() => navigation.navigate("Alerts")}
+        activeOpacity={0.8}
+      >
+        <View style={styles.profileCardContent}>
+          <View
+            style={[
+              styles.avatarContainer,
+              { backgroundColor: AppColors.destructive + "20" },
+            ]}
+          >
+            <Ionicons
+              name="notifications"
+              size={28}
+              color={AppColors.destructive}
+            />
+          </View>
+          <View style={styles.profileTextContainer}>
+            <ThemedText style={styles.profileTitle}>Allergen Alerts</ThemedText>
+            <ThemedText
+              style={[
+                styles.profileSubtitle,
+                { color: AppColors.secondaryText },
+              ]}
+            >
+              View allergen detection alerts
+            </ThemedText>
+          </View>
+        </View>
+        <Ionicons
+          name="chevron-forward"
+          size={24}
+          color={AppColors.secondaryText}
+        />
+      </TouchableOpacity>
+
       <SectionHeader title="SETTINGS" />
       <View style={styles.section}>
         <SettingsItem
