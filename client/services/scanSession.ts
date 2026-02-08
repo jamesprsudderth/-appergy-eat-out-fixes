@@ -77,3 +77,52 @@ export async function createScanSession(
     return null;
   }
 }
+
+export type ResultStatus = "safe" | "unsafe" | "manual_review_required";
+
+export interface ScanAttempt {
+  attemptNumber: number;
+  imageHash: string | null;
+  ocrText: string | null;
+  resultStatus: ResultStatus;
+  manualReviewReason: string | null;
+  createdAt: ReturnType<typeof serverTimestamp>;
+}
+
+/**
+ * Persist a scan attempt under the session.
+ * Spec §2.4: Attempts are written even when result is MRR.
+ * Path: users/{userId}/scanSessions/{sessionId}/attempts/{attemptId}
+ */
+export async function persistScanAttempt(
+  userId: string,
+  sessionId: string,
+  attempt: Omit<ScanAttempt, "createdAt">,
+): Promise<string | null> {
+  if (!db || !isFirebaseConfigured) {
+    console.log("Firebase not configured, skipping attempt persist");
+    return null;
+  }
+
+  try {
+    const attemptsRef = collection(
+      db,
+      "users",
+      userId,
+      "scanSessions",
+      sessionId,
+      "attempts",
+    );
+
+    const attemptData: ScanAttempt = {
+      ...attempt,
+      createdAt: serverTimestamp(),
+    };
+
+    const docRef = await addDoc(attemptsRef, attemptData);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error persisting scan attempt:", error);
+    return null;
+  }
+}

@@ -39,7 +39,10 @@ import {
 } from "@/services/analysisPipeline";
 import { useAuth } from "@/contexts/AuthContext";
 import { db, isFirebaseConfigured } from "@/services/firebase";
-import { createScanSession } from "@/services/scanSession";
+import {
+  createScanSession,
+  persistScanAttempt,
+} from "@/services/scanSession";
 
 type ScanScreenNavigationProp = NativeStackNavigationProp<
   ScanStackParamList,
@@ -70,6 +73,7 @@ export default function ScanScreen() {
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [isProcessingBarcode, setIsProcessingBarcode] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const attemptCountRef = useRef(0);
   const cameraRef = useRef<CameraView>(null);
 
   const selectedProfiles = profiles.filter((p) =>
@@ -288,6 +292,22 @@ export default function ScanScreen() {
           ? analyzeIngredientsText(ingredientText, selectedProfiles)
           : analyzeBarcodeProduct(product, selectedProfiles);
 
+      // Persist barcode scan attempt
+      attemptCountRef.current += 1;
+      const hasUnsafe = analysisResult.results.some(
+        (r) => r.status === "unsafe",
+      );
+      const resultStatus = hasUnsafe ? "unsafe" : "safe";
+      if (user && sessionId) {
+        persistScanAttempt(user.uid, sessionId, {
+          attemptNumber: attemptCountRef.current,
+          imageHash: null,
+          ocrText: ingredientText || null,
+          resultStatus,
+          manualReviewReason: null,
+        });
+      }
+
       navigation.navigate("Results", {
         analysisResult,
       });
@@ -433,6 +453,22 @@ export default function ScanScreen() {
                 "Sodium benzoate, MSG, Artificial colors (Red 40). " +
                 "Contains: wheat, milk, eggs, soy.";
               result = analyzeIngredientsText(mockText, selectedProfiles);
+            }
+
+            // Persist scan attempt
+            attemptCountRef.current += 1;
+            const hasUnsafe = result.results.some(
+              (r) => r.status === "unsafe",
+            );
+            const resultStatus = hasUnsafe ? "unsafe" : "safe";
+            if (user && sessionId) {
+              persistScanAttempt(user.uid, sessionId, {
+                attemptNumber: attemptCountRef.current,
+                imageHash: null,
+                ocrText: null,
+                resultStatus,
+                manualReviewReason: null,
+              });
             }
 
             setIsAnalyzing(false);
