@@ -1,0 +1,36 @@
+# CORE FEATURES
+
+1. Image Scanning (Camera)
+   - OCR ingredient extraction
+   - AI analysis
+   - Verdict:
+        ✅ Safe
+        ❌ Unsafe
+        🟡 Manual Review Required
+
+2. Family Profiles
+   - Admin + up to 4 profiles (family plan)
+   - Per-profile allergies
+   - Preferences
+   - Forbidden keywords
+   - Multi-profile scan comparison
+
+3. Grocery Lookup
+   - OpenFoodFacts API
+   - UPC search
+   - Ingredient extraction
+
+4. Scan History
+   - Saved to Firestore
+   - Per user
+   - Includes verdict + matched ingredients
+
+5. Subscription Tiers
+   - Free
+   - Individual
+   - Family
+
+6. Manual Review Escalation
+   - After 3 failed scans → warning escalation
+   - Cannot silently ignore repeated failuresProduct Requirements
+

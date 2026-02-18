@@ -1,0 +1,19 @@
+# UIRESULT SCREEN GROUPING
+
+❌ Allergens
+⛔ Preferences
+⚠️ Inferred Risks
+
+Icons must differ per conflict type.
+
+Actions:
+- Rescan
+- Confirm item name
+- Correct this result → saves override
+- After correction:
+  "Thanks for helping improve safety."
+
+Manual Review Logic:
+- Dismiss allowed once
+- After 3 failures → escalate warning Behavior Rules
+

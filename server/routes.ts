@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY = const env = validateEnv();
+const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 interface MatchedIngredient {
   name: string;

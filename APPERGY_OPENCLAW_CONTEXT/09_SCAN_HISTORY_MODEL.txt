@@ -1,0 +1,17 @@
+# ScScanHistoryItem:
+
+id
+timestamp
+type (camera | barcode)
+productName?
+ingredients[]
+safeCount
+unsafeCount
+familyChecked
+checkedProfileNames[]
+results:
+    profileId
+    name
+    safe
+    reasons[]an History Model
+

@@ -1,0 +1,21 @@
+# AFLOW:
+
+User → Camera → Base64 image
+→ /api/analyze-image
+→ AI processes ingredients
+→ Server returns structured analysis
+→ App renders grouped results
+→ Result saved to Firestore
+→ Subscription rules enforced
+
+MENU SCAN:
+User → Camera → /api/analyze-menu
+→ AI extracts menu items + inferred ingredients
+→ Conflict detection
+→ Escalation logic
+
+GROCERY:
+User → Search → /api/search (OpenFoodFacts)
+→ Ingredient + allergen tags returned
+→ Compared to profilerchitecture
+

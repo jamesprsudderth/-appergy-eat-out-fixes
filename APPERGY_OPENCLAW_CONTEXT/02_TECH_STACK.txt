@@ -1,0 +1,23 @@
+FRONTEND:
+- Expo SDK 54
+- React Native 0.81.5
+- React 19
+- TypeScript strict mode
+
+BACKEND:
+- Express 5
+- Drizzle ORM
+- PostgreSQL
+- OpenAI SDK
+
+AUTH:
+- Firebase Auth
+
+DATABASE:
+- Firestore (scan history + profiles)
+
+SUBSCRIPTIONS:
+- RevenueCat (production required)
+
+AI:
+- OpenAI API via backend endpoint

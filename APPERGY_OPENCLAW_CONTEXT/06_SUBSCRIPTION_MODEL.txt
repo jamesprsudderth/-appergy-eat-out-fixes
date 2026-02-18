@@ -1,0 +1,19 @@
+# STIERS
+
+Free:
+- 1 profile
+- 5 scans per month
+
+Individual:
+- 1 profile
+- Unlimited scans
+
+Family:
+- 4 profiles
+- Unlimited scans
+
+Production must:
+- Remove mock subscription logic
+- Integrate RevenueCat
+- Enforce server-side subscription validationubscription Model
+

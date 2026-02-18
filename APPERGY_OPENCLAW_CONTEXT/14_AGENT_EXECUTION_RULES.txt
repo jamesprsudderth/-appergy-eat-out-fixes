@@ -1,0 +1,13 @@
+# AGENT DIRECTIVES
+
+Priority Order:
+1. Security
+2. Data integrity
+3. Safety correctness
+4. Subscription enforcement
+5. UX polish
+
+Never refactor unnecessarily.
+Never weaken safety logic.
+Fail closed when uncertain.Agent Execution Rules
+

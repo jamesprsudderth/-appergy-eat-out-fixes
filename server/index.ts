@@ -1,11 +1,16 @@
+import "dotenv/config";
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
+import { validateEnv } from "./lib/envValidation";
+import { requestIdMiddleware } from "./middleware/requestId";
+import { logRequest, logInfo, logWarn, logError } from "./lib/logger";
+import { createRateLimiter } from "./middleware/rateLimiter";
+import { sendError } from "./lib/apiResponse";
 
 const app = express();
-const log = console.log;
 
 declare module "http" {
   interface IncomingMessage {
@@ -65,38 +70,6 @@ function setupBodyParsing(app: express.Application) {
   app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 }
 
-function setupRequestLogging(app: express.Application) {
-  app.use((req, res, next) => {
-    const start = Date.now();
-    const path = req.path;
-    let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
-
-    const originalResJson = res.json;
-    res.json = function (bodyJson, ...args) {
-      capturedJsonResponse = bodyJson;
-      return originalResJson.apply(res, [bodyJson, ...args]);
-    };
-
-    res.on("finish", () => {
-      if (!path.startsWith("/api")) return;
-
-      const duration = Date.now() - start;
-
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    });
-
-    next();
-  });
-}
 
 function getAppName(): string {
   try {
@@ -130,7 +103,7 @@ function serveExpoManifest(platform: string, req: Request, res: Response) {
   const expoDevPort = process.env.EXPO_DEV_PORT || "8081";
   const expoDevUrl = `http://localhost:${expoDevPort}`;
 
-  log(`No static build found, proxying manifest to Expo dev server at ${expoDevUrl}`);
+  logInfo(`No static build found, proxying manifest to Expo dev server at ${expoDevUrl}`);
 
   // Forward the request to the Expo dev server
   const proxyUrl = `${expoDevUrl}${req.path}`;
@@ -155,7 +128,7 @@ function serveExpoManifest(platform: string, req: Request, res: Response) {
       res.send(body);
     })
     .catch((err) => {
-      log(`Expo dev server proxy failed: ${err.message}`);
+      logWarn(`Expo dev server proxy failed: ${err.message}`);
       res.status(404).json({
         error: `Manifest not found for platform: ${platform}. ` +
           `Make sure the Expo dev server is running (npm run expo:dev) ` +
@@ -182,8 +155,7 @@ function serveLandingPage({
   const baseUrl = `${protocol}://${host}`;
   const expsUrl = `${host}`;
 
-  log(`baseUrl`, baseUrl);
-  log(`expsUrl`, expsUrl);
+  logInfo("Landing page URLs", { baseUrl, expsUrl });
 
   const html = landingPageTemplate
     .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
@@ -206,12 +178,12 @@ function configureExpoAndLanding(app: express.Application) {
   try {
     landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
   } catch {
-    log("Warning: landing-page.html not found, using fallback");
+    logWarn("landing-page.html not found, using fallback");
   }
 
   const appName = getAppName();
 
-  log("Serving static Expo files with dynamic manifest routing");
+  logInfo("Serving static Expo files with dynamic manifest routing");
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api")) {
@@ -242,7 +214,7 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  log("Expo routing: Checking expo-platform header on / and /manifest");
+  logInfo("Expo routing: Checking expo-platform header on / and /manifest");
 }
 
 function setupErrorHandler(app: express.Application) {
@@ -256,36 +228,44 @@ function setupErrorHandler(app: express.Application) {
     const status = error.status || error.statusCode || 500;
     const message = error.message || "Internal Server Error";
 
-    console.error("Internal Server Error:", err);
+    logError("Internal Server Error", { error: String(err) });
 
     if (res.headersSent) {
       return next(err);
     }
 
-    return res.status(status).json({ message });
+    sendError(res, "INTERNAL_ERROR", message, status);
   });
 }
 
 (async () => {
+  const env = validateEnv();
+
   setupCors(app);
   setupBodyParsing(app);
-  setupRequestLogging(app);
+
+  // requestId first so logRequest and route handlers can read it
+  app.use(requestIdMiddleware);
+  app.use(logRequest);
+
+  // Rate-limit only the heavy image-analysis endpoints
+  const apiLimiter = createRateLimiter({ windowMs: 60_000, maxRequests: 20 });
+  app.use("/api/analyze-image", apiLimiter);
+  app.use("/api/analyze-menu", apiLimiter);
 
   configureExpoAndLanding(app);
 
-  const server = await registerRoutes(app);
+  const server = await registerRoutes(app, { openaiApiKey: env.OPENAI_API_KEY });
 
   setupErrorHandler(app);
 
-  const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(
     {
-      port,
+      port: env.PORT,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
-      log(`express server serving on port ${port}`);
+      logInfo(`Server listening on port ${env.PORT}`);
     },
   );
 })();

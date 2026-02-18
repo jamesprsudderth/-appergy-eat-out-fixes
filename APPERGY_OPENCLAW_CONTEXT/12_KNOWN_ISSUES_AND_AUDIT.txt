@@ -1,0 +1,12 @@
+# KP0 ISSUES PREVIOUSLY FOUND
+
+- Unauthenticated API routes
+- Raw res.json calls
+- Console logging in production
+- Hardcoded API key (fixed)
+- Mock fallbacks active
+- Subscription still mocked
+- Manual review escalation incomplete
+
+OpenClaw must verify and fix.nown Issues and Audit
+

@@ -1,0 +1,16 @@
+# PrAPPERGY SCANNER
+
+Mission:
+Build a subscription-based AI-powered food allergy and dietary safety scanning app.
+
+Core Function:
+Allow users to scan food labels, menus, and grocery items to determine if food is safe based on allergy and dietary profiles.
+
+This is a SAFETY-FIRST application.
+If uncertain → FAIL CLOSED → require manual review.
+
+Launch Target:
+iOS + Android via Expo.
+Production backend required.
+No mock logic allowed in production.oject Overview
+

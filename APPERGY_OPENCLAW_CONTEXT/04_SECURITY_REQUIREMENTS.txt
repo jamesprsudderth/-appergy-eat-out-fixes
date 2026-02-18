@@ -1,0 +1,14 @@
+# SMANDATORY SECURITY RULES
+
+- All /api routes must require authentication
+- No raw res.json usage
+- Centralized sendSuccess / sendError only
+- No console.log in production
+- No OCR text logging
+- No image logging
+- No token logging
+- Environment variables validated on startup
+- Firebase must never run in demo mode in production
+- API keys never in client bundle
+- Fail closed on ambiguous AI resultsecurity Requirements
+

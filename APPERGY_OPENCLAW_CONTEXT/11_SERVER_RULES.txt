@@ -1,0 +1,9 @@
+# SSERVER RULES
+
+- Store raw ingredient text server-side
+- Store structured analysis result
+- Log metadata only (never images or OCR text)
+- Central error handler
+- Use Zod validation on all inputs
+- All endpoints require auth middlewareerver Rules
+

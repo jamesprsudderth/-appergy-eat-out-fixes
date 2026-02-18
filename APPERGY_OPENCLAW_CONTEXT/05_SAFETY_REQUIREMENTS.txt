@@ -1,0 +1,12 @@
+# LEGAL + SAFETY RULES
+
+- AI is NOT medical advice.
+- Terms of Service required at signup.
+- Every scan must show:
+    "AI can make mistakes. Always manually verify ingredients."
+
+- If confidence low → Manual Review Required
+- Inferred ingredient matching severe allergy → escalate to ❌
+- Manual review dismissible once
+- Repeated failures → forced escalation message Requirements
+

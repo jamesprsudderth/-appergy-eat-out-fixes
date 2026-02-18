@@ -1,0 +1,25 @@
+# FFIREBASE STRUCTURE
+
+Collection:
+users/{uid}
+
+Subcollection:
+scanHistory
+
+Each scan document:
+{
+  timestamp,
+  type,
+  productName?,
+  ingredients[],
+  results[],
+  safeCount,
+  unsafeCount,
+  familyChecked,
+  checkedProfileNames[]
+}
+
+Must:
+- Always save scan in production
+- Never skip silentlyirebase Architecture
+

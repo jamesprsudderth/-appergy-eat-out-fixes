@@ -1,0 +1,17 @@
+# LaBEFORE APP STORE SUBMISSION
+
+- Remove all mock logic
+- Remove demo Firebase mode
+- Implement RevenueCat
+- Enforce auth on all endpoints
+- Replace console logging
+- Ensure scans always persist
+- Full test flow:
+    Signup
+    Profile setup
+    Scan
+    Save
+    Subscription enforcement
+    Logout/login
+    Family plan limitsunch Ready Checklist
+

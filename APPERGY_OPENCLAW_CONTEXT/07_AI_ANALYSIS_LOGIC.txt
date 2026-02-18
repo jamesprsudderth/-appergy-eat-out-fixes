@@ -1,0 +1,22 @@
+# AIAI ANALYSIS REQUIREMENTS
+
+Input:
+- base64Image
+- selected profiles
+
+Output:
+- Extracted ingredients
+- Per-profile result:
+    - safe
+    - status (safe/unsafe/caution)
+    - reasons
+    - matched allergens
+    - matched keywords
+    - matched preferences
+
+Must:
+- Rate limit (3 sec)
+- Max image size (1MB)
+- Reject oversize images
+- Never silently fallback to mock in production Analysis Logic
+
