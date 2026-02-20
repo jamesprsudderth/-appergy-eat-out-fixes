@@ -67,8 +67,8 @@ export default function HomeScreen() {
         <ThemedText
           style={[styles.description, { color: AppColors.secondaryText }]}
         >
-          Scan food labels and menus to check for allergens. Your safety is our
-          priority.
+          Scan packaging, ingredient lists, and barcodes to check for allergens.
+          Your safety is our priority.
         </ThemedText>
       </View>
 
@@ -89,14 +89,17 @@ export default function HomeScreen() {
             <Ionicons name="camera" size={28} color={AppColors.primary} />
           </View>
           <View style={styles.actionContent}>
-            <ThemedText style={styles.actionTitle}>Scan Food Label</ThemedText>
+            <ThemedText style={styles.actionTitle}>
+              Scan Packaging / Ingredients List
+            </ThemedText>
             <ThemedText
               style={[
                 styles.actionDescription,
                 { color: AppColors.secondaryText },
               ]}
             >
-              Take a photo of any food label or menu to check for allergens
+              Take a photo of packaging or an ingredients list to check for
+              allergens
             </ThemedText>
           </View>
           <Feather
@@ -152,11 +155,7 @@ export default function HomeScreen() {
               { backgroundColor: AppColors.info + "20" },
             ]}
           >
-            <Ionicons
-              name="book-outline"
-              size={28}
-              color={AppColors.info}
-            />
+            <Ionicons name="book-outline" size={28} color={AppColors.info} />
           </View>
           <View style={styles.actionContent}>
             <ThemedText style={styles.actionTitle}>Scan Menu</ThemedText>
