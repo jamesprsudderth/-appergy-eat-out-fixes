@@ -128,7 +128,8 @@ export default function ScanScreen() {
             preferences: allPreferences,
             customPreferences: customPreferences,
             forbiddenKeywords,
-            treatMayContainAsUnsafe: profileData.treatMayContainAsUnsafe ?? false,
+            treatMayContainAsUnsafe:
+              profileData.treatMayContainAsUnsafe ?? false,
             allergySeverity: profileData.allergySeverity || {},
             emergencyContact: profileData.emergencyContact || undefined,
           });
@@ -163,13 +164,19 @@ export default function ScanScreen() {
             const memberAllergies = data.allergies || {};
             const memberCommonAllergies = Array.isArray(memberAllergies)
               ? memberAllergies
-              : [...(memberAllergies.common || []), ...(memberAllergies.custom || [])];
+              : [
+                  ...(memberAllergies.common || []),
+                  ...(memberAllergies.custom || []),
+                ];
 
             // Extract preferences from structured format for family members
             const memberPreferences = data.preferences || {};
             const memberCommonPreferences = Array.isArray(memberPreferences)
               ? memberPreferences
-              : [...(memberPreferences.common || []), ...(memberPreferences.custom || [])];
+              : [
+                  ...(memberPreferences.common || []),
+                  ...(memberPreferences.custom || []),
+                ];
 
             loadedProfiles.push({
               id: `member${i}`,
@@ -226,11 +233,14 @@ export default function ScanScreen() {
       setSelectedProfileIds(loadedProfiles.map((p) => p.id));
     }
 
-    console.log("Loaded profiles:", loadedProfiles.map(p => ({
-      name: p.name,
-      allergies: p.allergies,
-      preferences: p.preferences
-    })));
+    console.log(
+      "Loaded profiles:",
+      loadedProfiles.map((p) => ({
+        name: p.name,
+        allergies: p.allergies,
+        preferences: p.preferences,
+      })),
+    );
   };
 
   const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
@@ -266,7 +276,7 @@ export default function ScanScreen() {
                 setIsProcessingBarcode(false);
               },
             },
-          ]
+          ],
         );
         return;
       }
@@ -278,9 +288,10 @@ export default function ScanScreen() {
         ...(product.allergens || []).map((a) => `Contains: ${a}`),
       ].join(", ");
 
-      const analysisResult = ingredientText.length > 0
-        ? analyzeIngredientsText(ingredientText, selectedProfiles)
-        : analyzeBarcodeProduct(product, selectedProfiles);
+      const analysisResult =
+        ingredientText.length > 0
+          ? analyzeIngredientsText(ingredientText, selectedProfiles)
+          : analyzeBarcodeProduct(product, selectedProfiles);
 
       navigation.navigate("Results", {
         analysisResult,
@@ -290,7 +301,7 @@ export default function ScanScreen() {
       Alert.alert(
         "Scan Error",
         "Failed to process the barcode. Please try again.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
     } finally {
       setIsProcessingBarcode(false);
@@ -336,7 +347,8 @@ export default function ScanScreen() {
           <ThemedText
             style={[styles.description, { color: AppColors.secondaryText }]}
           >
-            We need camera access to scan food labels and menus for allergens.
+            We need camera access to scan packaging and ingredients for
+            allergens.
           </ThemedText>
           {canAskAgain ? (
             <Button onPress={requestPermission} style={styles.permissionButton}>
@@ -404,10 +416,7 @@ export default function ScanScreen() {
             // Step 1: Try server API (OCR + deterministic pipeline)
             let result;
             try {
-              result = await analyzeImage(
-                manipulated.base64,
-                selectedProfiles,
-              );
+              result = await analyzeImage(manipulated.base64, selectedProfiles);
 
               // Server now runs the full pipeline and returns
               // AnalysisResult directly — no client-side re-analysis needed.
@@ -545,7 +554,9 @@ export default function ScanScreen() {
         <View style={[styles.overlay, { paddingTop: insets.top }]}>
           <View style={styles.header}>
             <ThemedText style={styles.headerTitle}>
-              {scanMode === "camera" ? "Scan Menu / Label" : "Scan Barcode"}
+              {scanMode === "camera"
+                ? "Scan Packaging / Ingredients"
+                : "Scan Barcode"}
             </ThemedText>
             <TouchableOpacity
               style={styles.profileSelector}
@@ -677,17 +688,19 @@ export default function ScanScreen() {
           </View>
         </View>
 
-        <View style={styles.scanFrame}>
-          <View style={[styles.corner, styles.topLeft]} />
-          <View style={[styles.corner, styles.topRight]} />
-          <View style={[styles.corner, styles.bottomLeft]} />
-          <View style={[styles.corner, styles.bottomRight]} />
-        </View>
+        {scanMode === "barcode" ? (
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
+          </View>
+        ) : null}
 
         <View style={styles.instructions}>
           <ThemedText style={styles.instructionText}>
             {scanMode === "camera"
-              ? "Position the food label or menu within the frame"
+              ? "Position the packaging or ingredients list in view"
               : "Point at a product barcode to scan"}
           </ThemedText>
         </View>
