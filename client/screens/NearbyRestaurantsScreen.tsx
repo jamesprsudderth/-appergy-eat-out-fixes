@@ -248,11 +248,11 @@ export default function NearbyRestaurantsScreen() {
       };
     }
 
-    if (!userProfile?.mainProfile) {
+    if (!userProfile) {
       return { allergies: [], preferences: [] };
     }
 
-    const mp = userProfile.mainProfile;
+    const mp = userProfile;
 
     // Handle structured format: { common: [], custom: [], none: bool }
     const allergiesData = mp.allergies || {};

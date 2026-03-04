@@ -106,6 +106,22 @@ export async function getScanHistory(
   }
 }
 
+export function formatScanDate(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (diffDays === 1) {
+    return "Yesterday";
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else {
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+}
+
 export async function deleteScanFromHistory(
   userId: string,
   scanId: string

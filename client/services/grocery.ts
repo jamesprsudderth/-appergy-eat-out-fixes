@@ -4,6 +4,8 @@
  * Handles product search and lookup via Open Food Facts API.
  */
 
+import type { AnalysisResult } from "./ai";
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "http://localhost:5000";
@@ -139,6 +141,32 @@ class GroceryService {
       safe: conflicts.length === 0,
       warnings,
       conflicts,
+    };
+  }
+
+  toAnalysisResult(product: GroceryProduct, safety: SafetyCheck): AnalysisResult {
+    const profileId = "main";
+    const profileName = "You";
+    return {
+      ingredients: product.ingredients,
+      matchedIngredients: safety.conflicts.map((c) => ({
+        name: c,
+        type: "allergen" as const,
+        profileIds: [profileId],
+      })),
+      results: [
+        {
+          profileId,
+          name: profileName,
+          safe: safety.safe,
+          status: safety.safe ? "safe" : "unsafe",
+          reasons: safety.conflicts,
+          matchedAllergens: safety.conflicts,
+          matchedKeywords: [],
+          matchedPreferences: [],
+        },
+      ],
+      warnings: safety.warnings.length > 0 ? safety.warnings : undefined,
     };
   }
 }

@@ -223,8 +223,7 @@ export default function FamilyProfilesScreen() {
       return;
     }
 
-    const check = await canAddFamilyMember(familyMembers.length + 1);
-    if (!check.allowed) {
+    if (!subscriptionInfo || !canAddFamilyMember(familyMembers.length + 1, subscriptionInfo)) {
       setUpgradeModalVisible(true);
       return;
     }
