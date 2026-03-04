@@ -109,7 +109,7 @@ export default function AccountScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation<AccountScreenNavigationProp>();
-  const { user, logout } = useAuth();
+  const { user, logout, userProfile } = useAuth();
 
   const [allergyCount, setAllergyCount] = useState(2);
 

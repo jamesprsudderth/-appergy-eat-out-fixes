@@ -6,6 +6,7 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { ProfileInfo } from "../../shared/types";
 
 const RATE_LIMIT_KEY = "ai_last_request_timestamp";
 const RATE_LIMIT_MS = 3000; // 3 seconds between requests
@@ -60,6 +61,10 @@ export interface AnalysisResult {
   ingredients: string[];
   results: ProfileResult[];
   matchedIngredients: MatchedIngredient[];
+  rawExtractedText?: string;
+  ocrConfidence?: "high" | "medium" | "low";
+  warnings?: string[];
+  _isMock?: boolean;
 }
 
 export interface MatchedIngredient {
@@ -68,8 +73,8 @@ export interface MatchedIngredient {
   profileIds: string[];
 }
 
-// Re-export ProfileInfo from shared types (single source of truth)
-export type { ProfileInfo } from "../../shared/types";
+// Re-export ProfileInfo for consumers of this module
+export type { ProfileInfo };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN 
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` 
@@ -190,7 +195,7 @@ function generateMockAnalysis(profiles: ProfileInfo[]): AnalysisResult {
       reasons.push("Contains wheat flour - not gluten-free");
     }
 
-    keywords.forEach(keyword => {
+    keywords.forEach((keyword: string) => {
       const lowerKeyword = keyword.toLowerCase();
       const matchedIng = mockIngredients.find(ing => 
         ing.toLowerCase().includes(lowerKeyword) || 

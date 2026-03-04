@@ -1,9 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 
-const OPENAI_API_KEY = const env = validateEnv();
-const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-
 interface MatchedIngredient {
   name: string;
   type: "allergen" | "keyword" | "preference";
@@ -96,16 +93,12 @@ Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(', ') || 'None'}
 Be thorough in identifying common allergens like milk, eggs, peanuts, tree nuts, fish, shellfish, wheat, soy, and sesame.`;
 }
 
-async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string): Promise<any> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key not configured");
-  }
-
+async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string, apiKey: string): Promise<any> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
@@ -246,7 +239,11 @@ import {
   extractTextFromImage,
 } from "./services/analysis";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(
+  app: Express,
+  { openaiApiKey }: { openaiApiKey: string },
+): Promise<Server> {
+  const OPENAI_API_KEY = openaiApiKey;
 
   // ─── OCR Only: Extract text from image (no analysis) ───
   app.post("/api/ocr", async (req, res) => {
@@ -340,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (OPENAI_API_KEY) {
         try {
           const systemPrompt = buildMenuAnalysisPrompt(profile);
-          const aiResult = await analyzeImageWithOpenAI(base64Image, systemPrompt);
+          const aiResult = await analyzeImageWithOpenAI(base64Image, systemPrompt, OPENAI_API_KEY);
           return res.json(aiResult);
         } catch (aiError) {
           console.error("OpenAI menu analysis failed:", aiError);
@@ -392,7 +389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const suggestions = await generateDishSuggestionsWithOpenAI(
             restaurantName,
             allergies || "",
-            preferences || ""
+            preferences || "",
+            OPENAI_API_KEY,
           );
           return res.json({ suggestions });
         } catch (aiError) {
@@ -421,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (OPENAI_API_KEY) {
         try {
           const prompt = buildRecipeGenerationPrompt(preference, allergies || [], dietaryPreferences || [], profileNames || []);
-          const recipe = await generateRecipeWithOpenAI(prompt);
+          const recipe = await generateRecipeWithOpenAI(prompt, OPENAI_API_KEY);
           recipe.generatedFor = profileNames || [];
           return res.json({ recipe });
         } catch (aiError) {
@@ -499,7 +497,8 @@ function generateMockSuggestions(
 async function generateDishSuggestionsWithOpenAI(
   restaurantName: string,
   allergies: string,
-  preferences: string
+  preferences: string,
+  apiKey: string,
 ): Promise<string[]> {
   const prompt = `You are a food safety assistant for Appergy, a food allergy app.
 
@@ -525,7 +524,7 @@ Example: ["Grilled Salmon with Vegetables - Naturally gluten-free and dairy-free
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
@@ -599,16 +598,12 @@ Important:
 - Set difficulty based on complexity: Easy (under 30 min, simple techniques), Medium (30-60 min), Hard (over 60 min or advanced techniques)`;
 }
 
-async function generateRecipeWithOpenAI(prompt: string): Promise<any> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API key not configured");
-  }
-
+async function generateRecipeWithOpenAI(prompt: string, apiKey: string): Promise<any> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',

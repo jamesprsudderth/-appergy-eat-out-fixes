@@ -15,12 +15,14 @@ export interface SubscriptionInfo {
 export const PLAN_DETAILS = {
   free: {
     name: "Free",
+    price: "Free",
     maxProfiles: 1,
     maxScansPerDay: 3,
     features: ["Basic label scanning", "1 profile"],
   },
   individual: {
     name: "Individual",
+    price: "$4.99/mo",
     maxProfiles: 1,
     maxScansPerDay: -1, // unlimited
     features: [
@@ -33,6 +35,7 @@ export const PLAN_DETAILS = {
   },
   family: {
     name: "Family",
+    price: "$9.99/mo",
     maxProfiles: 5,
     maxScansPerDay: -1,
     features: [
