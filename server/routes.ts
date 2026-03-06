@@ -1,11 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 
-interface MatchedIngredient {
-  name: string;
-  type: "allergen" | "keyword" | "preference";
-  profileIds: string[];
-}
 
 interface ProfileInfo {
   id: string;
@@ -141,103 +136,14 @@ async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string,
   throw new Error('Failed to parse AI response');
 }
 
-function generateMockIngredientAnalysis(profiles: ProfileInfo[]): any {
-  const mockIngredients = [
-    "Wheat flour",
-    "Sugar",
-    "Milk",
-    "Eggs",
-    "Salt",
-    "Vegetable oil",
-    "Natural flavors",
-    "Soy lecithin",
-    "Modified corn starch",
-    "Sodium benzoate",
-    "MSG",
-    "Artificial colors (Red 40)",
-  ];
-
-  const matchedIngredients: MatchedIngredient[] = [];
-
-  const results = profiles.map((profile: any) => {
-    const matchedAllergens: string[] = [];
-    const matchedKeywords: string[] = [];
-    const matchedPreferences: string[] = [];
-    const reasons: string[] = [];
-
-    const allergies = profile.allergies || [];
-    const preferences = profile.preferences || [];
-    const forbiddenKeywords = profile.forbiddenKeywords || [];
-
-    if (allergies.includes("Dairy") || allergies.includes("Milk")) {
-      matchedAllergens.push("Milk");
-      reasons.push("Contains milk (dairy allergen)");
-    }
-    if (allergies.includes("Gluten") || allergies.includes("Wheat")) {
-      matchedAllergens.push("Wheat flour");
-      reasons.push("Contains wheat flour (gluten/wheat allergen)");
-    }
-    if (allergies.includes("Eggs")) {
-      matchedAllergens.push("Eggs");
-      reasons.push("Contains eggs (allergen)");
-    }
-    if (allergies.includes("Soy")) {
-      matchedAllergens.push("Soy lecithin");
-      reasons.push("Contains soy lecithin (soy allergen)");
-    }
-
-    if (preferences.includes("Vegan")) {
-      matchedPreferences.push("Not Vegan");
-      reasons.push("Contains animal-derived ingredients (milk, eggs) - not vegan");
-    }
-    if (preferences.includes("Gluten-Free")) {
-      matchedPreferences.push("Contains Gluten");
-      reasons.push("Contains wheat flour - not gluten-free");
-    }
-
-    forbiddenKeywords.forEach((keyword: string) => {
-      const lowerKeyword = keyword.toLowerCase();
-      const matchedIng = mockIngredients.find(ing =>
-        ing.toLowerCase().includes(lowerKeyword) ||
-        lowerKeyword.includes(ing.toLowerCase())
-      );
-      if (matchedIng) {
-        matchedKeywords.push(matchedIng);
-        reasons.push(`Contains forbidden ingredient: ${matchedIng}`);
-      }
-    });
-
-    let status = "safe";
-    if (matchedAllergens.length > 0 || matchedKeywords.length > 0) {
-      status = "unsafe";
-    } else if (matchedPreferences.length > 0) {
-      status = "caution";
-    }
-
-    return {
-      profileId: profile.id,
-      name: profile.name,
-      safe: status === "safe",
-      status,
-      reasons,
-      matchedAllergens,
-      matchedKeywords,
-      matchedPreferences,
-    };
-  });
-
-  return {
-    ingredients: mockIngredients,
-    results,
-    matchedIngredients,
-  };
-}
 
 import {
   analyzeImageFull,
   analyzeExtractedText,
   extractTextFromImage,
 } from "./services/analysis";
+import { requireAuth } from "./middleware/requireAuth";
+import { requireAppCheck } from "./middleware/requireAppCheck";
 
 export async function registerRoutes(
   app: Express,
@@ -245,8 +151,17 @@ export async function registerRoutes(
 ): Promise<Server> {
   const OPENAI_API_KEY = openaiApiKey;
 
+  // ─── Gate 1: App Check — attests the request comes from a genuine app binary ───
+  // Skipped in NODE_ENV=development so Expo Go / simulators work locally.
+  app.use("/api", requireAppCheck);
+
+  // ─── Gate 2: Auth — verifies the individual user's Firebase ID token ───
+  app.use("/api", requireAuth);
+
   // ─── OCR Only: Extract text from image (no analysis) ───
   app.post("/api/ocr", async (req, res) => {
+    // uid comes from the verified Firebase token set by requireAuth — never from req.body
+    const uid = res.locals.uid as string;
     try {
       const { base64Image } = req.body;
 
@@ -261,13 +176,15 @@ export async function registerRoutes(
       const ocr = await extractTextFromImage(base64Image, OPENAI_API_KEY);
       res.json(ocr);
     } catch (error: any) {
-      console.error("Error in OCR:", error);
+      console.error("Error in OCR:", { uid, error });
       res.status(500).json({ error: "Failed to extract text" });
     }
   });
 
   // ─── Image Analysis: OCR + Deterministic Pipeline ───
   app.post("/api/analyze-image", async (req, res) => {
+    // uid comes from the verified Firebase token set by requireAuth — never from req.body
+    const uid = res.locals.uid as string;
     try {
       const { base64Image, profiles } = req.body;
 
@@ -277,37 +194,22 @@ export async function registerRoutes(
           .json({ error: "base64Image and profiles are required" });
       }
 
-      // Try the two-phase pipeline: OpenAI OCR → deterministic engine
-      if (OPENAI_API_KEY) {
-        try {
-          const result = await analyzeImageFull(
-            base64Image,
-            profiles,
-            OPENAI_API_KEY
-          );
-          return res.json(result);
-        } catch (aiError) {
-          console.error("OpenAI OCR failed, falling back to mock:", aiError);
-        }
+      if (!OPENAI_API_KEY) {
+        return res.status(503).json({ error: "Analysis service not configured" });
       }
 
-      // Fallback: run mock ingredient text through the real engine
-      const mockText =
-        "Wheat flour, Sugar, Milk, Eggs, Salt, Vegetable oil, " +
-        "Natural flavors, Soy lecithin, Modified corn starch, " +
-        "Sodium benzoate, MSG, Artificial colors (Red 40). " +
-        "Contains: wheat, milk, eggs, soy.";
-      const result = analyzeExtractedText(mockText, profiles);
-      result._isMock = true;
+      const result = await analyzeImageFull(base64Image, profiles, OPENAI_API_KEY);
       res.json(result);
     } catch (error: any) {
-      console.error("Error analyzing image:", error);
+      console.error("Error analyzing image:", { uid, error });
       res.status(500).json({ error: "Failed to analyze image" });
     }
   });
 
   // ─── Text-Only Analysis (for barcode products, manual input) ───
   app.post("/api/analyze-text", async (req, res) => {
+    // uid comes from the verified Firebase token set by requireAuth — never from req.body
+    const uid = res.locals.uid as string;
     try {
       const { text, profiles } = req.body;
 
@@ -320,13 +222,15 @@ export async function registerRoutes(
       const result = analyzeExtractedText(text, profiles);
       res.json(result);
     } catch (error: any) {
-      console.error("Error analyzing text:", error);
+      console.error("Error analyzing text:", { uid, error });
       res.status(500).json({ error: "Failed to analyze text" });
     }
   });
 
-  // Menu analysis endpoint for restaurant menus
+  // ─── Menu Analysis ───
   app.post("/api/analyze-menu", async (req, res) => {
+    // uid comes from the verified Firebase token set by requireAuth — never from req.body
+    const uid = res.locals.uid as string;
     try {
       const { base64Image, profile } = req.body;
 
@@ -334,49 +238,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: "base64Image and profile are required" });
       }
 
-      if (OPENAI_API_KEY) {
-        try {
-          const systemPrompt = buildMenuAnalysisPrompt(profile);
-          const aiResult = await analyzeImageWithOpenAI(base64Image, systemPrompt, OPENAI_API_KEY);
-          return res.json(aiResult);
-        } catch (aiError) {
-          console.error("OpenAI menu analysis failed:", aiError);
-        }
+      if (!OPENAI_API_KEY) {
+        return res.status(503).json({ error: "Analysis service not configured" });
       }
 
-      // Mock menu analysis response
-      res.json({
-        menu_items: [
-          {
-            name: "Grilled Chicken Salad",
-            description: "Fresh greens with grilled chicken, cherry tomatoes, and vinaigrette",
-            price: "$14.99",
-            inferred_ingredients: ["chicken", "lettuce", "tomatoes", "olive oil", "vinegar"],
-            verdict: "Safe",
-            conflicts: []
-          },
-          {
-            name: "Pasta Carbonara",
-            description: "Creamy pasta with bacon and parmesan",
-            price: "$16.99",
-            inferred_ingredients: ["pasta (wheat)", "eggs", "bacon", "parmesan cheese", "cream"],
-            verdict: "Unsafe",
-            conflicts: [
-              { type: "allergy_risk", conflict: "Wheat/Gluten", detail: "Contains pasta made from wheat flour" },
-              { type: "allergy_risk", conflict: "Dairy", detail: "Contains cream and parmesan cheese" },
-              { type: "allergy_risk", conflict: "Eggs", detail: "Traditional carbonara contains eggs" }
-            ]
-          }
-        ]
-      });
+      const systemPrompt = buildMenuAnalysisPrompt(profile);
+      const aiResult = await analyzeImageWithOpenAI(base64Image, systemPrompt, OPENAI_API_KEY);
+      res.json(aiResult);
     } catch (error: any) {
-      console.error("Error analyzing menu:", error);
+      console.error("Error analyzing menu:", { uid, error });
       res.status(500).json({ error: "Failed to analyze menu" });
     }
   });
 
-  // Dish suggestions endpoint using GPT
+  // ─── Dish Suggestions ───
   app.post("/api/dish-suggestions", async (req, res) => {
+    // uid comes from the verified Firebase token set by requireAuth — never from req.body
+    const uid = res.locals.uid as string;
     try {
       const { restaurantName, allergies, preferences } = req.body;
 
@@ -384,31 +262,27 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Restaurant name is required" });
       }
 
-      if (OPENAI_API_KEY) {
-        try {
-          const suggestions = await generateDishSuggestionsWithOpenAI(
-            restaurantName,
-            allergies || "",
-            preferences || "",
-            OPENAI_API_KEY,
-          );
-          return res.json({ suggestions });
-        } catch (aiError) {
-          console.error("OpenAI dish suggestions failed, using fallback:", aiError);
-        }
+      if (!OPENAI_API_KEY) {
+        return res.status(503).json({ error: "Suggestions service not configured" });
       }
 
-      // Fallback to local suggestions
-      const suggestions = generateMockSuggestions(restaurantName, allergies, preferences);
+      const suggestions = await generateDishSuggestionsWithOpenAI(
+        restaurantName,
+        allergies || "",
+        preferences || "",
+        OPENAI_API_KEY,
+      );
       res.json({ suggestions });
     } catch (error: any) {
-      console.error("Error generating dish suggestions:", error);
+      console.error("Error generating dish suggestions:", { uid, error });
       res.status(500).json({ error: "Failed to generate suggestions" });
     }
   });
 
-  // Recipe generation endpoint
+  // ─── Recipe Generation ───
   app.post("/api/generate-recipe", async (req, res) => {
+    // uid comes from the verified Firebase token set by requireAuth — never from req.body
+    const uid = res.locals.uid as string;
     try {
       const { preference, allergies, dietaryPreferences, profileNames } = req.body;
 
@@ -416,22 +290,16 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Recipe preference is required" });
       }
 
-      if (OPENAI_API_KEY) {
-        try {
-          const prompt = buildRecipeGenerationPrompt(preference, allergies || [], dietaryPreferences || [], profileNames || []);
-          const recipe = await generateRecipeWithOpenAI(prompt, OPENAI_API_KEY);
-          recipe.generatedFor = profileNames || [];
-          return res.json({ recipe });
-        } catch (aiError) {
-          console.error("OpenAI recipe generation failed:", aiError);
-        }
+      if (!OPENAI_API_KEY) {
+        return res.status(503).json({ error: "Recipe service not configured" });
       }
 
-      // Fallback to mock recipe
-      const mockRecipe = generateMockRecipe(preference, allergies || [], profileNames || []);
-      res.json({ recipe: mockRecipe });
+      const prompt = buildRecipeGenerationPrompt(preference, allergies || [], dietaryPreferences || [], profileNames || []);
+      const recipe = await generateRecipeWithOpenAI(prompt, OPENAI_API_KEY);
+      recipe.generatedFor = profileNames || [];
+      res.json({ recipe });
     } catch (error: any) {
-      console.error("Error generating recipe:", error);
+      console.error("Error generating recipe:", { uid, error });
       res.status(500).json({ error: "Failed to generate recipe" });
     }
   });
@@ -441,58 +309,6 @@ export async function registerRoutes(
   return httpServer;
 }
 
-function generateMockSuggestions(
-  restaurantName: string,
-  allergies: string,
-  preferences: string
-): string[] {
-  const isVegetarian = preferences.toLowerCase().includes("vegetarian");
-  const isVegan = preferences.toLowerCase().includes("vegan");
-  const hasGluten = allergies.toLowerCase().includes("gluten");
-  const hasDairy = allergies.toLowerCase().includes("dairy");
-  const hasPeanuts = allergies.toLowerCase().includes("peanut");
-
-  if (isVegan) {
-    return [
-      `Roasted vegetable Buddha bowl - Assorted roasted vegetables with tahini dressing, safe for your dietary needs`,
-      `Mushroom and spinach risotto (dairy-free) - Creamy rice dish made with plant-based cream`,
-      `Thai vegetable curry with coconut rice - Aromatic curry with fresh vegetables and coconut milk`,
-      `Grilled portobello mushroom steak - Marinated mushroom with herb sauce and roasted potatoes`,
-      `Mediterranean falafel plate - Crispy falafel with hummus, fresh vegetables, and warm pita`,
-    ];
-  }
-
-  if (isVegetarian) {
-    const suggestions = [
-      `Caprese salad - Fresh mozzarella with vine-ripened tomatoes and basil drizzle`,
-      `Vegetable lasagna - Layered pasta with ricotta cheese and seasonal vegetables`,
-      `Spinach and ricotta ravioli - Handmade pasta with sage butter sauce`,
-      `Eggplant parmesan - Breaded eggplant with marinara and melted cheese`,
-      `Greek salad with feta - Crisp vegetables with Kalamata olives and feta cheese`,
-    ];
-    return hasDairy 
-      ? suggestions.map(s => s.replace(/mozzarella|ricotta|feta|cheese/gi, "dairy-free alternative"))
-      : suggestions;
-  }
-
-  if (hasGluten) {
-    return [
-      `Grilled ribeye steak with potato puree - Premium steak with creamy mashed potatoes (gluten-free)`,
-      `Pan-seared salmon - Fresh Atlantic salmon with lemon butter and steamed vegetables`,
-      `Herb-roasted chicken - Free-range chicken with roasted root vegetables`,
-      `Shrimp scampi with rice - Garlic butter shrimp served over fluffy rice (no pasta)`,
-      `Lamb chops with mint sauce - Tender lamb with fresh mint and grilled asparagus`,
-    ];
-  }
-
-  return [
-    `Grilled salmon with roasted vegetables - Fresh Atlantic salmon with seasonal vegetables, no common allergens`,
-    `Mediterranean quinoa bowl - Quinoa with cherry tomatoes, cucumbers, olives, and herb dressing`,
-    `Herb-crusted chicken breast - Tender chicken with fresh herbs and steamed broccoli`,
-    `Shrimp stir-fry with jasmine rice - Sautéed shrimp with vegetables in a light garlic sauce`,
-    `Fresh garden salad with grilled tofu - Mixed greens with marinated tofu and balsamic vinaigrette`,
-  ];
-}
 
 async function generateDishSuggestionsWithOpenAI(
   restaurantName: string,
@@ -632,76 +448,3 @@ async function generateRecipeWithOpenAI(prompt: string, apiKey: string): Promise
   throw new Error('Failed to parse recipe response');
 }
 
-function generateMockRecipe(preference: string, allergies: string[], profileNames: string[]): any {
-  const recipes: Record<string, any> = {
-    pasta: {
-      title: "Allergen-Free Pasta Primavera",
-      description: "A colorful and vibrant pasta dish loaded with fresh vegetables, tossed in olive oil and garlic.",
-      prepTime: "15 minutes",
-      cookTime: "20 minutes",
-      servings: 4,
-      difficulty: "Easy",
-      cuisine: "Italian",
-      ingredients: [
-        { item: "gluten-free pasta", amount: "12 oz" },
-        { item: "olive oil", amount: "2 tablespoons" },
-        { item: "garlic, minced", amount: "2 cloves" },
-        { item: "cherry tomatoes, halved", amount: "1 cup" },
-        { item: "zucchini, sliced", amount: "1 medium" },
-        { item: "bell pepper, diced", amount: "1 medium" },
-        { item: "fresh spinach", amount: "1 cup" },
-        { item: "salt and pepper", amount: "to taste" },
-        { item: "fresh basil", amount: "for garnish" }
-      ],
-      instructions: [
-        "Cook pasta according to package directions. Drain and set aside.",
-        "Heat olive oil in a large skillet over medium heat.",
-        "Add garlic and cook for 1 minute until fragrant.",
-        "Add zucchini and bell pepper, cook for 5 minutes.",
-        "Add cherry tomatoes and cook for 3 more minutes.",
-        "Toss in cooked pasta and spinach, stir until wilted.",
-        "Season with salt and pepper, garnish with fresh basil."
-      ],
-      allergenNotes: "This recipe is gluten-free and dairy-free.",
-      substitutionTips: ["Use regular pasta if gluten is not a concern", "Add grilled chicken for extra protein"],
-      generatedFor: profileNames
-    },
-    default: {
-      title: "Simple Safe Stir-Fry",
-      description: "A quick and healthy stir-fry with crisp vegetables and your choice of protein in a savory sauce.",
-      prepTime: "10 minutes",
-      cookTime: "15 minutes",
-      servings: 4,
-      difficulty: "Easy",
-      cuisine: "Asian",
-      ingredients: [
-        { item: "mixed vegetables (broccoli, carrots, snap peas)", amount: "2 cups" },
-        { item: "protein of choice (chicken, tofu, or shrimp)", amount: "1 lb" },
-        { item: "olive oil", amount: "3 tablespoons" },
-        { item: "garlic, minced", amount: "2 cloves" },
-        { item: "fresh ginger, grated", amount: "1 inch" },
-        { item: "coconut aminos (soy-free)", amount: "3 tablespoons" },
-        { item: "rice vinegar", amount: "1 tablespoon" },
-        { item: "cooked rice", amount: "for serving" }
-      ],
-      instructions: [
-        "Cut protein into bite-sized pieces and vegetables into uniform sizes.",
-        "Heat 2 tablespoons oil in a wok or large skillet over high heat.",
-        "Cook protein until done, about 5-7 minutes. Remove and set aside.",
-        "Add remaining oil, then garlic and ginger. Cook 30 seconds.",
-        "Add vegetables and stir-fry for 4-5 minutes until crisp-tender.",
-        "Return protein to pan, add coconut aminos and rice vinegar.",
-        "Toss everything together and serve over rice."
-      ],
-      allergenNotes: "This recipe uses coconut aminos instead of soy sauce to avoid soy allergens.",
-      substitutionTips: ["Use tamari if soy is not a concern", "Swap rice for cauliflower rice for low-carb option"],
-      generatedFor: profileNames
-    }
-  };
-
-  const lowerPref = preference.toLowerCase();
-  if (lowerPref.includes("pasta") || lowerPref.includes("italian")) {
-    return recipes.pasta;
-  }
-  return recipes.default;
-}

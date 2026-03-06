@@ -4,9 +4,7 @@
  * Provides safe dish suggestions based on user allergies and dietary preferences.
  */
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : "http://localhost:5000";
+import { authFetch } from "./apiClient";
 
 export async function getSafeDishSuggestions(
   restaurantName: string,
@@ -14,9 +12,8 @@ export async function getSafeDishSuggestions(
   preferences: string[]
 ): Promise<string[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/dish-suggestions`, {
+    const response = await authFetch("/api/dish-suggestions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         restaurantName,
         allergies: allergies.join(", "),

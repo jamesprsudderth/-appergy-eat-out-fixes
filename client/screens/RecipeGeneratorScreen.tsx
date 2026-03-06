@@ -239,7 +239,7 @@ export default function RecipeGeneratorScreen() {
 
     try {
       const recipesRef = collection(db, "users", user.uid, "savedRecipes");
-      const q = query(recipesRef, orderBy("savedAt", "desc"));
+      const q = query(recipesRef, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
       const recipes: Recipe[] = [];
       snapshot.forEach((doc) => {

@@ -1,0 +1,42 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: appergy-server
+  # Replace with your GCP project and preferred region
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      # Timeout for long-running OpenAI vision calls
+      timeoutSeconds: 120
+      containers:
+        - image: gcr.io/YOUR_GCP_PROJECT/appergy-server:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            # PORT is injected automatically by Cloud Run as 8080 — no override needed
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-api-key
+                  key: latest
+            # Firebase Admin service account JSON.
+            # If omitted, the SDK uses Application Default Credentials automatically
+            # (Cloud Run service account must have roles/firebase.admin or
+            # roles/iam.serviceAccountTokenCreator granted in IAM).
+            - name: FIREBASE_SERVICE_ACCOUNT
+              valueFrom:
+                secretKeyRef:
+                  name: firebase-service-account
+                  key: latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi

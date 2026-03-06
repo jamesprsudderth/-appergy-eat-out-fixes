@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+node_modules
+.expo
+dist
+web-build
+static-build
+.git
+.gitignore
+*.log
+.DS_Store

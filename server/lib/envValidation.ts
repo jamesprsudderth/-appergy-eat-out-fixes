@@ -12,6 +12,14 @@ const envSchema = z.object({
   /** OpenAI secret key — required in production */
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
 
+  /**
+   * Firebase Admin service account JSON string (optional).
+   * When absent the SDK falls back to Application Default Credentials,
+   * which works automatically on Cloud Run.
+   * For local dev: set this or run `gcloud auth application-default login`.
+   */
+  FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
+
   /** Replit-specific (optional) */
   REPLIT_DEV_DOMAIN: z.string().optional(),
   REPLIT_DOMAINS: z.string().optional(),

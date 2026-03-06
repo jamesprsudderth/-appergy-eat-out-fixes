@@ -1,0 +1,13 @@
+specVersion: "v1"
+serviceId: "appergy-24baa-service"
+location: "us-east4"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "appergy-24baa-database"
+      cloudSql:
+        instanceId: "appergy-24baa-instance"
+        # schemaValidation: "STRICT"     # STRICT mode makes Postgres schema match Data Connect exactly.
+        # schemaValidation: "COMPATIBLE" # COMPATIBLE mode makes Postgres schema compatible with Data Connect.
+connectorDirs: ["./example"]

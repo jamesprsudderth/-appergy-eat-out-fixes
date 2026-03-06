@@ -1,6 +1,8 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import {
+  initializeAuth,
   getAuth,
+  getReactNativePersistence,
   Auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -9,6 +11,7 @@ import {
   User,
   Unsubscribe,
 } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -52,11 +55,19 @@ let db: Firestore | null = null;
 try {
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
+    // initializeAuth (not getAuth) must be called on first init so we can
+    // supply AsyncStorage persistence. getAuth on a fresh app would default
+    // to in-memory persistence, logging the user out on every app restart.
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
   } else {
     app = getApps()[0];
+    // App already initialized (e.g. hot reload) — retrieve existing Auth
+    // instance; calling initializeAuth again would throw.
+    auth = getAuth(app);
   }
 
-  auth = getAuth(app);
   db = getFirestore(app);
 } catch (error) {
   console.error("Firebase initialization failed:", error);

@@ -9,9 +9,13 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.appergy.app",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
+      "package": "com.appergy.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#f8f8f6",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -35,7 +39,9 @@
           "backgroundColor": "#f8f8f6"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-firebase/app",
+      "@react-native-firebase/app-check"
     ],
     "experiments": {
       "reactCompiler": true

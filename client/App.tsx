@@ -12,6 +12,12 @@ import { queryClient } from "@/lib/query-client";
 import RootStackNavigator from "@/navigation/RootStackNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { initAppCheck } from "@/services/appCheck";
+
+// Initialize App Check before any Firebase service or API call is made.
+// DeviceCheck (iOS) / Play Integrity (Android) require a native EAS build;
+// debug tokens are used automatically in __DEV__ / Expo Go.
+initAppCheck();
 
 export default function App() {
   return (

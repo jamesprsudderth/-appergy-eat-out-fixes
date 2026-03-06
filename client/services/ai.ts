@@ -7,6 +7,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ProfileInfo } from "../../shared/types";
+import { authFetch } from "./apiClient";
 
 const RATE_LIMIT_KEY = "ai_last_request_timestamp";
 const RATE_LIMIT_MS = 3000; // 3 seconds between requests
@@ -76,10 +77,6 @@ export interface MatchedIngredient {
 // Re-export ProfileInfo for consumers of this module
 export type { ProfileInfo };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN 
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` 
-  : "http://localhost:5000";
-
 export async function analyzeImage(
   base64Image: string,
   selectedProfiles: ProfileInfo[]
@@ -101,11 +98,8 @@ export async function analyzeImage(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/analyze-image`, {
+    const response = await authFetch("/api/analyze-image", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         base64Image,
         profiles: selectedProfiles,
@@ -348,11 +342,8 @@ export async function analyzeMenu(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/analyze-menu`, {
+    const response = await authFetch("/api/analyze-menu", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         base64Image,
         profile: userProfile,
