@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   canAddFamilyMember,
   getSubscriptionInfo,
+  purchaseSubscription,
   PLAN_DETAILS,
   SubscriptionInfo,
 } from "@/services/subscription";
@@ -165,6 +166,7 @@ export default function FamilyProfilesScreen() {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [subscriptionInfo, setSubscriptionInfo] =
     useState<SubscriptionInfo | null>(null);
 
@@ -484,16 +486,22 @@ export default function FamilyProfilesScreen() {
             </View>
 
             <Button
-              onPress={() => {
-                setUpgradeModalVisible(false);
-                Alert.alert(
-                  "Coming Soon",
-                  "Subscriptions will be available soon!",
-                );
+              onPress={async () => {
+                setIsPurchasing(true);
+                const success = await purchaseSubscription("family");
+                setIsPurchasing(false);
+                if (success) {
+                  setUpgradeModalVisible(false);
+                  await loadSubscriptionInfo();
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success
+                  );
+                }
               }}
               style={styles.upgradeButton}
+              disabled={isPurchasing}
             >
-              Upgrade Now
+              {isPurchasing ? "Processing…" : "Upgrade Now"}
             </Button>
           </View>
         </View>

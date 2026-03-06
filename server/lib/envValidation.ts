@@ -20,6 +20,13 @@ const envSchema = z.object({
    */
   FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
 
+  /**
+   * RevenueCat secret (server-side) key.
+   * Required to verify entitlements server-side.
+   * Find it in RevenueCat dashboard → Project → API Keys → Secret keys.
+   */
+  REVENUECAT_SECRET_KEY: z.string().optional(),
+
   /** Replit-specific (optional) */
   REPLIT_DEV_DOMAIN: z.string().optional(),
   REPLIT_DOMAINS: z.string().optional(),

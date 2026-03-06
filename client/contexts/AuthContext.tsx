@@ -9,6 +9,10 @@ import {
   User,
   isFirebaseConfigured,
 } from "@/services/firebase";
+import {
+  configureRevenueCat,
+  logOutRevenueCat,
+} from "@/services/subscription";
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -111,6 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (firebaseUser) {
           setUser(firebaseUser);
           setIsDemoMode(false);
+
+          // Configure RevenueCat for this user
+          configureRevenueCat(firebaseUser.uid);
 
           // Load user profile and check onboarding status
           await loadUserProfile(firebaseUser.uid);
@@ -315,6 +322,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem(STORAGE_KEYS.DEMO_USER_DATA),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_PROFILE),
       ]);
+
+      await logOutRevenueCat();
 
       // Clear in-memory state immediately so navigator switches to Auth
       setUserProfile(null);

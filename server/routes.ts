@@ -144,6 +144,8 @@ import {
 } from "./services/analysis";
 import { requireAuth } from "./middleware/requireAuth";
 import { requireAppCheck } from "./middleware/requireAppCheck";
+import { getSubscriberEntitlements } from "./lib/revenueCat";
+import { getAdminApp } from "./lib/firebaseAdmin";
 
 export async function registerRoutes(
   app: Express,
@@ -301,6 +303,41 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error generating recipe:", { uid, error });
       res.status(500).json({ error: "Failed to generate recipe" });
+    }
+  });
+
+  // ─── Subscription: verify entitlements via RevenueCat REST API & sync to Firestore ───
+  app.post("/api/subscription/verify", async (req, res) => {
+    const uid = res.locals.uid as string;
+    try {
+      const secretKey = process.env.REVENUECAT_SECRET_KEY;
+      if (!secretKey) {
+        return res
+          .status(503)
+          .json({ error: "Subscription service not configured" });
+      }
+
+      const subscription = await getSubscriberEntitlements(uid, secretKey);
+
+      // Sync verified status to Firestore so security rules / other services
+      // can gate on it without calling RevenueCat on every request.
+      const adminDb = getAdminApp().firestore();
+      await adminDb.doc(`users/${uid}`).set(
+        {
+          subscription: {
+            tier: subscription.tier,
+            isActive: subscription.isActive,
+            expiresAt: subscription.expiresAt ?? null,
+            verifiedAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
+
+      res.json(subscription);
+    } catch (error: any) {
+      console.error("Error verifying subscription:", { uid, error });
+      res.status(500).json({ error: "Failed to verify subscription" });
     }
   });
 

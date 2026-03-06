@@ -5,43 +5,88 @@ rules_version = '2';
 // Deploy via Firebase Console → Firestore → Rules
 // Or via CLI: firebase deploy --only firestore:rules
 //
-// Data Structure:
-//   users/{userId}                          — main profile doc
-//   users/{userId}/settings/forbiddenKeywords — keywords subdoc
+// Data structure:
+//   users/{userId}                            — main profile doc
+//   users/{userId}/settings/{settingId}       — per-user settings (keywords, etc.)
 //   users/{userId}/familyProfiles/{memberId}  — family member profiles
 //   users/{userId}/savedRecipes/{recipeId}    — saved/generated recipes
-//   users/{userId}/scanHistory/{scanId}       — scan history (future)
+//   users/{userId}/scanHistory/{scanId}       — scan history
+//
+// Security model:
+//   • Each user can only access their own documents (reads and writes).
+//   • The top-level user document (`users/{userId}`) splits write permission:
+//       - create: allowed, but the client must NOT supply a `subscription` field.
+//       - update: allowed, but the client cannot change the `subscription` field.
+//       - delete: allowed (supports account self-deletion / GDPR).
+//   • The `subscription` field is written exclusively by the server via the
+//     Admin SDK (Admin SDK bypasses security rules entirely).  This prevents
+//     a malicious client from self-granting a paid tier.
+//   • All subcollections are fully readable and writable only by their owner.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── User Profile ──
-    // Only the authenticated user can read/write their own profile
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    // True when the authenticated caller's UID matches the document owner.
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // True when the incoming write does NOT touch the `subscription` map.
+    // Uses MapDiff.affectedKeys() which returns the union of added, removed,
+    // and changed top-level keys — catching both direct writes and field-path
+    // updates such as updateDoc({ "subscription.tier": "family" }).
+    function subscriptionUnchanged() {
+      return !request.resource.data.diff(resource.data)
+                                   .affectedKeys()
+                                   .hasAny(["subscription"]);
+    }
+
+    // ── users/{userId} ───────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // ── Settings (forbidden keywords, etc.) ──
+      // Owner can read their full profile.
+      allow read: if isOwner(userId);
+
+      // Owner can create their profile doc — the client must not set the
+      // `subscription` field (only the server may initialise it).
+      allow create: if isOwner(userId)
+                    && !("subscription" in request.resource.data);
+
+      // Owner can update their profile doc — the `subscription` field is
+      // immutable from the client; the server (Admin SDK) is the only writer.
+      allow update: if isOwner(userId) && subscriptionUnchanged();
+
+      // Owner can delete their own doc (GDPR / account deletion).
+      allow delete: if isOwner(userId);
+
+      // ── users/{userId}/settings/{settingId} ──────────────────────────────
+      // Forbidden keywords and other per-user settings.
+      // No sensitive server-managed fields — full client read/write for owner.
       match /settings/{settingId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
 
-      // ── Family Profiles ──
+      // ── users/{userId}/familyProfiles/{memberId} ─────────────────────────
+      // Family member profiles. Strictly scoped to the owning user —
+      // family members themselves do not get cross-profile access.
       match /familyProfiles/{memberId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
 
-      // ── Saved Recipes ──
+      // ── users/{userId}/savedRecipes/{recipeId} ───────────────────────────
       match /savedRecipes/{recipeId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
 
-      // ── Scan History (future) ──
+      // ── users/{userId}/scanHistory/{scanId} ──────────────────────────────
       match /scanHistory/{scanId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
     }
 
-    // Block everything else
+    // Block every path not explicitly matched above.
     match /{document=**} {
       allow read, write: if false;
     }
