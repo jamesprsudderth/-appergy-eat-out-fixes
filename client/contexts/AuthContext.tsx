@@ -9,7 +9,7 @@ import {
   User,
   isFirebaseConfigured,
 } from "@/services/firebase";
-import {
+import { 
   configureRevenueCat,
   logOutRevenueCat,
 } from "@/services/subscription";
@@ -144,27 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadPersistedState = async () => {
+    // Only restore the onboarding flag so the root navigator doesn't flash
+    // to the onboarding flow on re-open. User, profile, and demo state are
+    // managed exclusively by the onAuthStateChanged listener to avoid a race
+    // where stale AsyncStorage data overwrites freshly-loaded Firestore data.
     try {
-      const [storedOnboarded, storedDemoMode, storedProfile] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED),
-        AsyncStorage.getItem(STORAGE_KEYS.IS_DEMO_MODE),
-        AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE),
-      ]);
-
+      const storedOnboarded = await AsyncStorage.getItem(STORAGE_KEYS.IS_ONBOARDED);
       if (storedOnboarded === "true") {
         setIsOnboardedState(true);
-      }
-
-      if (storedDemoMode === "true") {
-        setIsDemoMode(true);
-        setUser(DEMO_USER);
-        setUserProfile(demoProfile);
-      } else if (storedProfile) {
-        try {
-          setUserProfile(JSON.parse(storedProfile));
-        } catch {
-          // Invalid JSON, ignore
-        }
       }
     } catch (error) {
       console.error("Error loading persisted auth state:", error);

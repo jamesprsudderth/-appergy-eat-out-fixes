@@ -24,7 +24,6 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { ProfileResult, SafetyStatus } from "@/services/ai";
 import { ScanStackParamList } from "@/navigation/ScanStackNavigator";
 import { useAuth } from "@/contexts/AuthContext";
-import { saveScanToHistory } from "@/services/scanHistory";
 import { db, isFirebaseConfigured } from "@/services/firebase";
 
 type ResultsScreenRouteProp = RouteProp<ScanStackParamList, "Results">;
@@ -388,7 +387,6 @@ export default function ResultsScreen() {
   const navigation = useNavigation<ResultsScreenNavigationProp>();
   const route = useRoute<ResultsScreenRouteProp>();
   const { user, isDemoMode, refreshUserProfile } = useAuth();
-  const hasSaved = useRef(false);
 
   const { analysisResult } = route.params;
 
@@ -418,14 +416,6 @@ export default function ResultsScreen() {
     matchedIngredients.map((m) => m.name.toLowerCase()),
   );
 
-  useEffect(() => {
-    if (user && !hasSaved.current) {
-      hasSaved.current = true;
-      saveScanToHistory(user.uid, analysisResult).catch((error) => {
-        console.error("Failed to save scan to history:", error);
-      });
-    }
-  }, [user, analysisResult]);
 
   useEffect(() => {
     if (!hasShownModal.current && (unsafeCount > 0 || cautionCount > 0)) {
@@ -519,7 +509,16 @@ export default function ResultsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <StatusBadge status={overallStatus} />
+        {analysisResult.reviewRequired ? (
+          <View style={[styles.statusBadge, { backgroundColor: "#2a2a1a" }]}>
+            <Ionicons name="eye-outline" size={40} color={AppColors.warning} />
+            <ThemedText style={[styles.statusLabel, { color: AppColors.warning }]}>
+              REVIEW REQUIRED
+            </ThemedText>
+          </View>
+        ) : (
+          <StatusBadge status={overallStatus} />
+        )}
 
         {/* OCR Confidence / Mock Data Warnings */}
         {analysisResult._isMock ? (
@@ -544,15 +543,7 @@ export default function ResultsScreen() {
           </View>
         ) : null}
 
-        {analysisResult.ocrConfidence === "low" && !analysisResult.warnings?.length ? (
-          <View style={[styles.warningBanner, { backgroundColor: AppColors.destructive + "15", borderColor: AppColors.destructive }]}>
-            <Ionicons name="alert-circle" size={20} color={AppColors.destructive} />
-            <ThemedText style={[styles.warningBannerText, { color: AppColors.destructive }]}>
-              Low confidence scan — some ingredients may have been misread. Consider re-scanning with better lighting.
-            </ThemedText>
-          </View>
-        ) : null}
-
+        {!analysisResult.reviewRequired ? (
         <View style={styles.summary}>
           <View style={styles.summaryItem}>
             <ThemedText
@@ -593,6 +584,7 @@ export default function ResultsScreen() {
             </ThemedText>
           </View>
         </View>
+        ) : null}
 
         {analysisResult.ingredients.length > 0 ? (
           <>

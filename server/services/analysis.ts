@@ -66,7 +66,9 @@ export async function extractTextFromImage(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      // gpt-4o gives materially better OCR accuracy on food labels vs mini —
+      // the cost delta is justified given this is a safety-critical application.
+      model: "gpt-4o",
       messages: [
         { role: "system", content: OCR_SYSTEM_PROMPT },
         {
@@ -259,6 +261,17 @@ function addMatchedIngredient(
  * Full server-side analysis: extract text from image via OpenAI, then run
  * the deterministic engine. Returns a backward-compatible AnalysisResult.
  */
+// Map OCR confidence strings to numeric scores used for threshold decisions.
+// Thresholds from product spec:
+//   ≥ 0.85  → normal result
+//   0.70–0.84 → show "verify" banner
+//   < 0.70  → REVIEW_REQUIRED — do not show safe/unsafe verdict
+const OCR_CONFIDENCE_SCORE: Record<string, number> = {
+  high: 0.97,
+  medium: 0.82,
+  low: 0.65,
+};
+
 export async function analyzeImageFull(
   base64Image: string,
   profiles: ProfileInfo[],
@@ -267,24 +280,22 @@ export async function analyzeImageFull(
   // Phase 1: OCR
   const ocr = await extractTextFromImage(base64Image, apiKey);
 
-  if (ocr.type === "unreadable" || !ocr.raw_text) {
-    // Return empty safe result with a warning
+  const confidenceScore = OCR_CONFIDENCE_SCORE[ocr.confidence] ?? 0.65;
+  const confidenceLevel = ocr.confidence as "high" | "medium" | "low";
+
+  // Unreadable or low-confidence → require manual review; never fabricate a verdict
+  if (ocr.type === "unreadable" || !ocr.raw_text || confidenceScore < 0.70) {
     return {
       ingredients: [],
-      results: profiles.map((p) => ({
-        profileId: p.id,
-        name: p.name,
-        safe: true,
-        status: "safe" as const,
-        reasons: [],
-        matchedAllergens: [],
-        matchedKeywords: [],
-        matchedPreferences: [],
-      })),
+      results: [],
       matchedIngredients: [],
-      rawExtractedText: "",
+      rawExtractedText: ocr.raw_text ?? "",
+      ocrConfidence: ocr.confidence,
+      confidenceScore,
+      confidenceLevel,
+      reviewRequired: true,
       warnings: [
-        "Could not read ingredient text from the image. Please try again with a clearer photo.",
+        "We couldn't analyze this with sufficient confidence. Please check the ingredient list manually or ask a staff member.",
         ...(ocr.notes ? [ocr.notes] : []),
       ],
     };
@@ -292,32 +303,22 @@ export async function analyzeImageFull(
 
   // Reconstruct full label text including Contains/May contain
   let fullText = ocr.raw_text;
-  if (
-    ocr.contains_statement &&
-    !fullText.toLowerCase().includes("contains:")
-  ) {
+  if (ocr.contains_statement && !fullText.toLowerCase().includes("contains:")) {
     fullText += `\nContains: ${ocr.contains_statement}`;
   }
-  if (
-    ocr.may_contain_statement &&
-    !fullText.toLowerCase().includes("may contain")
-  ) {
+  if (ocr.may_contain_statement && !fullText.toLowerCase().includes("may contain")) {
     fullText += `\nMay contain: ${ocr.may_contain_statement}`;
   }
 
   // Phase 2: Deterministic analysis
   const result = analyzeExtractedText(fullText, profiles);
 
-  // Attach warnings
+  // Build warnings according to confidence tier
   const warnings: string[] = [];
-  if (ocr.confidence === "low") {
+  if (confidenceScore < 0.85) {
+    // medium tier (0.70–0.84) — result shown but flagged for verification
     warnings.push(
-      "Low confidence in text extraction. Some ingredients may have been misread."
-    );
-  }
-  if (ocr.confidence === "medium") {
-    warnings.push(
-      "Some text was partially unclear. Please verify the results."
+      "⚠ Verify before consuming — some text was partially unclear. Review the ingredient list and confirm with the manufacturer if you have a severe allergy."
     );
   }
   if (ocr.notes) {
@@ -328,6 +329,9 @@ export async function analyzeImageFull(
     ...result,
     rawExtractedText: fullText,
     ocrConfidence: ocr.confidence,
+    confidenceScore,
+    confidenceLevel,
+    reviewRequired: false,
     warnings: warnings.length > 0 ? warnings : undefined,
   };
 }

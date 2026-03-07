@@ -227,16 +227,22 @@ export default function MenuScanScreen() {
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (photo && photo.uri) {
+        // Constrain the longer edge to 1024px (VISION.md §10.1)
+        const resizeAction =
+          photo.width >= photo.height
+            ? { resize: { width: 1024 } }
+            : { resize: { height: 1024 } };
+
         const manipulated = await ImageManipulator.manipulateAsync(
           photo.uri,
-          [{ resize: { width: 1024 } }],
+          [resizeAction],
           {
-            compress: 0.7,
+            compress: 0.8,
             format: ImageManipulator.SaveFormat.JPEG,
             base64: true,
           },

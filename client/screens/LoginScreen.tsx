@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -8,9 +8,10 @@ import {
   Image,
   Alert,
   Keyboard,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
@@ -28,6 +29,8 @@ import {
   auth,
   db,
   signInWithEmailAndPassword,
+  signInWithApple,
+  isAppleSignInAvailable,
   isFirebaseConfigured,
 } from "@/services/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -76,6 +79,14 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === "ios") {
+      isAppleSignInAvailable().then(setIsAppleAvailable).catch(() => {});
+    }
+  }, []);
 
   const {
     control,
@@ -206,6 +217,27 @@ export default function LoginScreen() {
   const handleDemoMode = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     loginAsDemo();
+  };
+
+  const handleAppleSignIn = async () => {
+    if (!isFirebaseConfigured || !auth) {
+      setError("root", { message: "Firebase is not configured." });
+      return;
+    }
+    setIsAppleLoading(true);
+    try {
+      await signInWithApple();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // onAuthStateChanged in AuthContext handles the rest
+    } catch (error: any) {
+      // ERR_CANCELED = user dismissed the sheet — not a real error
+      if (error.code !== "ERR_CANCELED") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setError("root", { message: "Apple Sign-In failed. Please try again." });
+      }
+    } finally {
+      setIsAppleLoading(false);
+    }
   };
 
   return (
@@ -389,6 +421,27 @@ export default function LoginScreen() {
               ]}
             />
           </View>
+
+          {isAppleAvailable && (
+            <TouchableOpacity
+              style={[styles.appleButton, { backgroundColor: AppColors.text }]}
+              onPress={handleAppleSignIn}
+              disabled={isAppleLoading}
+              activeOpacity={0.8}
+            >
+              {isAppleLoading ? (
+                <ActivityIndicator color={AppColors.background} />
+              ) : (
+                <>
+                  <FontAwesome name="apple" size={20} color={AppColors.background} />
+                  <ThemedText style={[styles.appleButtonText, { color: AppColors.background }]}>
+                    Sign in with Apple
+                  </ThemedText>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={[styles.demoButton, { backgroundColor: AppColors.surface }]}
             onPress={handleDemoMode}
@@ -509,6 +562,21 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: Spacing.md,
     fontSize: 14,
+  },
+  appleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.sm,
+    gap: Spacing.sm,
+    width: "100%",
+    marginBottom: Spacing.md,
+  },
+  appleButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
   demoButton: {
     flexDirection: "row",

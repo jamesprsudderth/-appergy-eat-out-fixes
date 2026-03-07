@@ -50,73 +50,86 @@ Be extremely cautious - when in doubt, mark as Unsafe. Focus on severe allergy r
 
 function buildMenuAnalysisPrompt(profile: ProfileInfo): string {
   const allAllergies = [...(profile.allergies || []), ...(profile.customAllergies || [])];
-  
-  return `You are an AI assistant for a food allergy app called Appergy. Your task is to analyze restaurant menu images, extract menu items, infer ingredients, and compare them against a user's dietary profile to identify potential risks.
+
+  return `You are an AI assistant for a food allergy app called Appergy. Analyze a restaurant menu image, extract menu items, and assess allergen risk for this user.
 
 **User Profile:**
-Allergies: ${allAllergies.join(', ') || 'None'}
-Preferences: ${(profile.preferences || []).join(', ') || 'None'}
-Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(', ') || 'None'}
+Allergies: ${allAllergies.join(", ") || "None"}
+Preferences: ${(profile.preferences || []).join(", ") || "None"}
+Forbidden Keywords: ${(profile.forbiddenKeywords || []).join(", ") || "None"}
 
 **Instructions:**
-1. Extract all menu items with their names, descriptions, and prices from the image
-2. For each item, infer the primary ingredients typically used based on the name and description
-3. Cross-reference inferred ingredients with the user's allergies, preferences, and forbidden keywords
-4. Provide a verdict (Safe/Unsafe) and detailed reasoning for any conflicts
-5. If uncertain about ingredients, state potential ingredients rather than definitive ones
+1. Extract every menu item visible in the image.
+2. For each ingredient, set source to:
+   - "explicit" — the ingredient or allergen is directly stated on the menu (in the description, allergen note, etc.)
+   - "inferred" — you are inferring the ingredient from the dish name or cuisine type
+3. An "inferred" ingredient MUST NOT produce a verdict of "Unsafe". It can produce "Caution" with a note that confirmation is required.
+4. Only "explicit" ingredients can produce an "Unsafe" verdict.
+5. Cross-reference against the user's allergies, preferences, and forbidden keywords.
 
-**Output Format (JSON):**
+**Output Format (JSON only — no markdown):**
 {
   "menu_items": [
     {
       "name": "Item name",
-      "description": "Item description from menu",
-      "price": "Price if visible",
-      "inferred_ingredients": ["ingredient1", "ingredient2"],
-      "verdict": "Safe" or "Unsafe",
+      "description": "Description from menu",
+      "price": "Price if visible or null",
+      "ingredients": [
+        { "name": "butter", "source": "inferred" },
+        { "name": "wheat", "source": "explicit" }
+      ],
+      "verdict": "Safe" | "Caution" | "Unsafe",
+      "confidence": "high" | "medium" | "low",
       "conflicts": [
         {
           "type": "allergy_risk" | "preference_mismatch" | "forbidden_keyword",
-          "conflict": "The allergen/preference/keyword",
-          "detail": "Explanation of the conflict"
+          "ingredient": "The specific ingredient",
+          "source": "explicit" | "inferred",
+          "detail": "Explanation"
         }
       ]
     }
   ]
 }
 
-Be thorough in identifying common allergens like milk, eggs, peanuts, tree nuts, fish, shellfish, wheat, soy, and sesame.`;
+Critical rules:
+- NEVER mark an item Unsafe based solely on inferred ingredients.
+- Always label inferred ingredients clearly so the UI can warn the user.
+- Common allergens to check: milk, eggs, peanuts, tree nuts, fish, shellfish, wheat, soy, sesame.`;
 }
 
 async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string, apiKey: string): Promise<any> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      // gpt-4o for menu analysis — better at reading dense menu text and
+      // reasoning about cuisine-specific ingredients than gpt-4o-mini.
+      model: "gpt-4o",
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: "system", content: systemPrompt },
         {
-          role: 'user',
+          role: "user",
           content: [
             {
-              type: 'text',
-              text: 'Analyze this image and provide the structured JSON output as requested.',
+              type: "text",
+              text: "Analyze this menu image and return structured JSON only.",
             },
             {
-              type: 'image_url',
+              type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${base64Image}`,
+                detail: "high",
               },
             },
           ],
         },
       ],
-      max_tokens: 2000,
-      temperature: 0.3,
+      max_tokens: 3000,
+      temperature: 0.2,
     }),
   });
 
@@ -127,13 +140,13 @@ async function analyzeImageWithOpenAI(base64Image: string, systemPrompt: string,
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
+
+  const jsonMatch = content.replace(/```json\s*|```\s*/g, "").match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     return JSON.parse(jsonMatch[0]);
   }
-  
-  throw new Error('Failed to parse AI response');
+
+  throw new Error("Failed to parse AI menu response");
 }
 
 
@@ -146,6 +159,7 @@ import { requireAuth } from "./middleware/requireAuth";
 import { requireAppCheck } from "./middleware/requireAppCheck";
 import { getSubscriberEntitlements } from "./lib/revenueCat";
 import { getAdminApp } from "./lib/firebaseAdmin";
+import { createUserRateLimiter } from "./middleware/requireUserRateLimit";
 
 export async function registerRoutes(
   app: Express,
@@ -160,8 +174,14 @@ export async function registerRoutes(
   // ─── Gate 2: Auth — verifies the individual user's Firebase ID token ───
   app.use("/api", requireAuth);
 
+  // ─── Gate 3: Per-user AI rate limit (Firestore counter, fixed hourly window) ───
+  // Applied only to the 6 AI routes below; /api/subscription/verify is excluded.
+  const aiRateLimit = createUserRateLimiter(
+    Number(process.env.AI_RATE_LIMIT_HOURLY) || 20,
+  );
+
   // ─── OCR Only: Extract text from image (no analysis) ───
-  app.post("/api/ocr", async (req, res) => {
+  app.post("/api/ocr", aiRateLimit, async (req, res) => {
     // uid comes from the verified Firebase token set by requireAuth — never from req.body
     const uid = res.locals.uid as string;
     try {
@@ -184,11 +204,11 @@ export async function registerRoutes(
   });
 
   // ─── Image Analysis: OCR + Deterministic Pipeline ───
-  app.post("/api/analyze-image", async (req, res) => {
+  app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
     // uid comes from the verified Firebase token set by requireAuth — never from req.body
     const uid = res.locals.uid as string;
     try {
-      const { base64Image, profiles } = req.body;
+      const { base64Image, profiles, productName } = req.body;
 
       if (!base64Image || !profiles || !Array.isArray(profiles)) {
         return res
@@ -201,7 +221,41 @@ export async function registerRoutes(
       }
 
       const result = await analyzeImageFull(base64Image, profiles, OPENAI_API_KEY);
-      res.json(result);
+
+      // Write scan history server-side via Admin SDK so the client never has
+      // write access to scanHistory — prevents fabricated results.
+      let scanId: string | null = null;
+      try {
+        const adminDb = getAdminApp().firestore();
+        const safeCount = result.results.filter((r) => r.safe).length;
+        const unsafeCount = result.results.filter((r) => !r.safe).length;
+        const docRef = await adminDb.collection(`users/${uid}/scanHistory`).add({
+          timestamp: new Date().toISOString(),
+          type: "camera",
+          productName: productName ?? null,
+          ingredients: result.ingredients,
+          safeCount,
+          unsafeCount,
+          reviewRequired: result.reviewRequired ?? false,
+          confidenceScore: result.confidenceScore ?? null,
+          confidenceLevel: result.confidenceLevel ?? null,
+          familyChecked: result.results.length > 1,
+          checkedProfileNames: result.results.map((r) => r.name),
+          results: result.results.map((r) => ({
+            profileId: r.profileId,
+            name: r.name,
+            safe: r.safe,
+            status: r.status,
+            reasons: r.reasons,
+          })),
+        });
+        scanId = docRef.id;
+      } catch (historyErr) {
+        // Non-fatal — analysis result is returned even if history save fails
+        console.error("Failed to save scan history:", { uid, historyErr });
+      }
+
+      res.json({ ...result, scanId });
     } catch (error: any) {
       console.error("Error analyzing image:", { uid, error });
       res.status(500).json({ error: "Failed to analyze image" });
@@ -209,7 +263,7 @@ export async function registerRoutes(
   });
 
   // ─── Text-Only Analysis (for barcode products, manual input) ───
-  app.post("/api/analyze-text", async (req, res) => {
+  app.post("/api/analyze-text", aiRateLimit, async (req, res) => {
     // uid comes from the verified Firebase token set by requireAuth — never from req.body
     const uid = res.locals.uid as string;
     try {
@@ -230,7 +284,7 @@ export async function registerRoutes(
   });
 
   // ─── Menu Analysis ───
-  app.post("/api/analyze-menu", async (req, res) => {
+  app.post("/api/analyze-menu", aiRateLimit, async (req, res) => {
     // uid comes from the verified Firebase token set by requireAuth — never from req.body
     const uid = res.locals.uid as string;
     try {
@@ -254,7 +308,7 @@ export async function registerRoutes(
   });
 
   // ─── Dish Suggestions ───
-  app.post("/api/dish-suggestions", async (req, res) => {
+  app.post("/api/dish-suggestions", aiRateLimit, async (req, res) => {
     // uid comes from the verified Firebase token set by requireAuth — never from req.body
     const uid = res.locals.uid as string;
     try {
@@ -282,7 +336,7 @@ export async function registerRoutes(
   });
 
   // ─── Recipe Generation ───
-  app.post("/api/generate-recipe", async (req, res) => {
+  app.post("/api/generate-recipe", aiRateLimit, async (req, res) => {
     // uid comes from the verified Firebase token set by requireAuth — never from req.body
     const uid = res.locals.uid as string;
     try {

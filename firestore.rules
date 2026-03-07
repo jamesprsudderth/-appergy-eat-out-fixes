@@ -10,7 +10,7 @@ rules_version = '2';
 //   users/{userId}/settings/{settingId}       — per-user settings (keywords, etc.)
 //   users/{userId}/familyProfiles/{memberId}  — family member profiles
 //   users/{userId}/savedRecipes/{recipeId}    — saved/generated recipes
-//   users/{userId}/scanHistory/{scanId}       — scan history
+//   users/{userId}/scanHistory/{scanId}       — scan history (server-write only)
 //
 // Security model:
 //   • Each user can only access their own documents (reads and writes).
@@ -19,9 +19,13 @@ rules_version = '2';
 //       - update: allowed, but the client cannot change the `subscription` field.
 //       - delete: allowed (supports account self-deletion / GDPR).
 //   • The `subscription` field is written exclusively by the server via the
-//     Admin SDK (Admin SDK bypasses security rules entirely).  This prevents
+//     Admin SDK (Admin SDK bypasses security rules entirely). This prevents
 //     a malicious client from self-granting a paid tier.
-//   • All subcollections are fully readable and writable only by their owner.
+//   • scanHistory documents are written exclusively by the server via the
+//     Admin SDK after a verified analysis. Clients may read and delete their
+//     own entries, but cannot create or update them — preventing fabricated
+//     scan results.
+//   • All other subcollections are fully readable and writable only by owner.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -43,6 +47,25 @@ service cloud.firestore {
                                    .hasAny(["subscription"]);
     }
 
+    // True when the write only uses known top-level keys on the user doc.
+    // Prevents clients from writing arbitrary top-level fields that could
+    // confuse server-side logic or bloat documents unexpectedly.
+    function userDocKeysValid() {
+      return request.resource.data.keys().hasOnly([
+        "mainProfile",
+        "role",
+        "subscription",
+        "createdAt",
+        "updatedAt"
+      ]);
+    }
+
+    // True when `role`, if present, is one of the two valid values.
+    function roleValid() {
+      return !("role" in request.resource.data)
+          || request.resource.data.role in ["admin", "member"];
+    }
+
     // ── users/{userId} ───────────────────────────────────────────────────────
     match /users/{userId} {
 
@@ -52,11 +75,16 @@ service cloud.firestore {
       // Owner can create their profile doc — the client must not set the
       // `subscription` field (only the server may initialise it).
       allow create: if isOwner(userId)
-                    && !("subscription" in request.resource.data);
+                    && !("subscription" in request.resource.data)
+                    && userDocKeysValid()
+                    && roleValid();
 
       // Owner can update their profile doc — the `subscription` field is
       // immutable from the client; the server (Admin SDK) is the only writer.
-      allow update: if isOwner(userId) && subscriptionUnchanged();
+      allow update: if isOwner(userId)
+                    && subscriptionUnchanged()
+                    && userDocKeysValid()
+                    && roleValid();
 
       // Owner can delete their own doc (GDPR / account deletion).
       allow delete: if isOwner(userId);
@@ -81,8 +109,13 @@ service cloud.firestore {
       }
 
       // ── users/{userId}/scanHistory/{scanId} ──────────────────────────────
+      // Written exclusively by the Admin SDK (server) after a verified
+      // analysis. Clients may read and delete their own entries but cannot
+      // create or update them — this ensures scan results can never be
+      // fabricated by a malicious client.
       match /scanHistory/{scanId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow delete: if isOwner(userId);
       }
     }
 

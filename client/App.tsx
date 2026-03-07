@@ -1,4 +1,13 @@
+import * as Sentry from "@sentry/react-native";
 import React from "react";
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: __DEV__ ? "development" : "production",
+  // Disable in dev so noise doesn't pollute your Sentry project during iteration.
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
 import { StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -19,7 +28,7 @@ import { initAppCheck } from "@/services/appCheck";
 // debug tokens are used automatically in __DEV__ / Expo Go.
 initAppCheck();
 
-export default function App() {
+function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -39,6 +48,8 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+export default Sentry.wrap(App);
 
 const styles = StyleSheet.create({
   root: {

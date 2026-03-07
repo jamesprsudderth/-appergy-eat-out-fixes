@@ -11,7 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.appergy.app",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.appergy.app",
@@ -41,7 +42,8 @@
       ],
       "expo-web-browser",
       "@react-native-firebase/app",
-      "@react-native-firebase/app-check"
+      "@react-native-firebase/app-check",
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "reactCompiler": true

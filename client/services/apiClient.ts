@@ -8,7 +8,7 @@
  * Both use the cached-token pattern (false / forceRefresh=false) so Firebase
  * is only contacted when a token is within ~5 minutes of expiry.
  */
-import { auth } from "./firebase";
+import { auth, signOut } from "./firebase";
 import { getAppCheckToken } from "./appCheck";
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
@@ -37,15 +37,43 @@ export async function authFetch(
     getAppCheckToken(),        // null in Expo Go / if App Check not initialized
   ]);
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
-    Authorization: `Bearer ${idToken}`,
+  const buildHeaders = (token: string): Record<string, string> => {
+    const h: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+      Authorization: `Bearer ${token}`,
+    };
+    if (appCheckToken) h["X-Firebase-AppCheck"] = appCheckToken;
+    return h;
   };
 
-  if (appCheckToken) {
-    headers["X-Firebase-AppCheck"] = appCheckToken;
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: buildHeaders(idToken),
+  });
+
+  // On 401, force-refresh the token once and retry. This handles the common
+  // case where the cached token expired between fetches. If the retry also
+  // returns 401 the session is no longer valid (revoked / account disabled)
+  // so sign the user out to prevent an infinite loop.
+  if (response.status === 401) {
+    try {
+      const freshToken = await user.getIdToken(true);
+      const retried = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: buildHeaders(freshToken),
+      });
+
+      if (retried.status === 401 && auth) {
+        await signOut(auth);
+      }
+
+      return retried;
+    } catch {
+      if (auth) await signOut(auth);
+      throw new Error("Session expired. Please sign in again.");
+    }
   }
 
-  return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  return response;
 }

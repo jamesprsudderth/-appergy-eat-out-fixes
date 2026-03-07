@@ -33,10 +33,6 @@ import {
   analyzeBarcodeProduct,
   ProfileInfo,
 } from "@/services/ai";
-import {
-  analyzeIngredientsText,
-  analyzeIngredientsTextEnhanced,
-} from "@/services/analysisPipeline";
 import { useAuth } from "@/contexts/AuthContext";
 import { db, isFirebaseConfigured } from "@/services/firebase";
 
@@ -378,16 +374,22 @@ export default function ScanScreen() {
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (photo && photo.uri) {
+        // Constrain the longer edge to 1024px (VISION.md §10.1)
+        const resizeAction =
+          photo.width >= photo.height
+            ? { resize: { width: 1024 } }
+            : { resize: { height: 1024 } };
+
         const manipulated = await ImageManipulator.manipulateAsync(
           photo.uri,
-          [{ resize: { width: 1024 } }],
+          [resizeAction],
           {
-            compress: 0.7,
+            compress: 0.8,
             format: ImageManipulator.SaveFormat.JPEG,
             base64: true,
           },
@@ -401,27 +403,10 @@ export default function ScanScreen() {
           setIsAnalyzing(true);
 
           try {
-            // Step 1: Try server API (OCR + deterministic pipeline)
-            let result;
-            try {
-              result = await analyzeImage(
-                manipulated.base64,
-                selectedProfiles,
-              );
-
-              // Server now runs the full pipeline and returns
-              // AnalysisResult directly — no client-side re-analysis needed.
-              // Only fall through if server returned mock data AND we're offline.
-            } catch {
-              // Step 2: Server unreachable — run mock text through local engine
-              const mockText =
-                "Wheat flour, Sugar, Milk, Eggs, Salt, Vegetable oil, " +
-                "Natural flavors, Soy lecithin, Modified corn starch, " +
-                "Sodium benzoate, MSG, Artificial colors (Red 40). " +
-                "Contains: wheat, milk, eggs, soy.";
-              result = analyzeIngredientsText(mockText, selectedProfiles);
-            }
-
+            const result = await analyzeImage(
+              manipulated.base64,
+              selectedProfiles,
+            );
             setIsAnalyzing(false);
             setCapturedImage(null);
             navigation.navigate("Results", { analysisResult: result });

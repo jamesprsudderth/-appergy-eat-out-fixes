@@ -1,4 +1,15 @@
 import "dotenv/config";
+import * as Sentry from "@sentry/node";
+
+// Sentry must be initialized before any other imports that might throw.
+// When SENTRY_DSN is absent the SDK is a no-op so there is no cost in dev.
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV ?? "development",
+  // Capture 100 % of transactions in dev; tune down in production via env.
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+});
+
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
@@ -218,6 +229,10 @@ function configureExpoAndLanding(app: express.Application) {
 }
 
 function setupErrorHandler(app: express.Application) {
+  // Must be registered after all routes so Sentry captures the full request
+  // context. The generic handler below runs afterward.
+  Sentry.setupExpressErrorHandler(app);
+
   app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     const error = err as {
       status?: number;

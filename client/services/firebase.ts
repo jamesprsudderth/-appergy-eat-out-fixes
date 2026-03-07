@@ -3,6 +3,8 @@ import {
   initializeAuth,
   getAuth,
   getReactNativePersistence,
+  OAuthProvider,
+  signInWithCredential,
   Auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -11,6 +13,8 @@ import {
   User,
   Unsubscribe,
 } from "firebase/auth";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, Firestore } from "firebase/firestore";
 
@@ -83,3 +87,46 @@ export {
   onAuthStateChanged,
 };
 export type { User, Unsubscribe };
+
+// ─── Apple Sign-In ────────────────────────────────────────────────────────────
+
+/** Returns true when running on iOS 13+ (the only platform that supports Apple Sign-In). */
+export const isAppleSignInAvailable = AppleAuthentication.isAvailableAsync;
+
+/**
+ * Perform an Apple Sign-In and return a Firebase User.
+ * Throws `AppleAuthentication.AppleAuthenticationError` on cancellation so
+ * callers can distinguish cancel from a real error.
+ */
+export async function signInWithApple(): Promise<User> {
+  if (!auth) throw new Error("Firebase Auth is not initialized.");
+
+  // Generate a cryptographically-random nonce and its SHA-256 hash.
+  // Apple uses the hash to bind the credential; Firebase needs the raw value.
+  const rawNonce = Array.from(
+    Crypto.getRandomValues(new Uint8Array(32)),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+
+  const hashedNonce = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    rawNonce,
+  );
+
+  const appleCredential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+    nonce: hashedNonce,
+  });
+
+  const provider = new OAuthProvider("apple.com");
+  const oauthCredential = provider.credential({
+    idToken: appleCredential.identityToken!,
+    rawNonce,
+  });
+
+  const result = await signInWithCredential(auth, oauthCredential);
+  return result.user;
+}

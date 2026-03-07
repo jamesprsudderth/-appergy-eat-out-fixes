@@ -27,6 +27,19 @@ const envSchema = z.object({
    */
   REVENUECAT_SECRET_KEY: z.string().optional(),
 
+  /**
+   * Maximum AI API calls allowed per user per hour.
+   * Enforced via a Firestore counter. Defaults to 20.
+   */
+  AI_RATE_LIMIT_HOURLY: z.coerce.number().int().positive().optional(),
+
+  /**
+   * Sentry DSN for server-side error monitoring.
+   * Find it in Sentry → Project Settings → Client Keys (DSN).
+   * Optional — Sentry is silently disabled when absent.
+   */
+  SENTRY_DSN: z.string().url().optional(),
+
   /** Replit-specific (optional) */
   REPLIT_DEV_DOMAIN: z.string().optional(),
   REPLIT_DOMAINS: z.string().optional(),
