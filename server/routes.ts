@@ -395,6 +395,51 @@ export async function registerRoutes(
     }
   });
 
+  // ─── Account Deletion (GDPR / App Store compliance) ───────────────────────
+  // Deletes all user data from Firestore and removes the Firebase Auth account.
+  // Must be called server-side so the Admin SDK can delete scanHistory (which
+  // is write-protected from the client) and the Auth record itself.
+  app.delete("/api/account", async (_req, res) => {
+    const uid = res.locals.uid as string;
+    try {
+      const adminApp = getAdminApp();
+      const adminDb = adminApp.firestore();
+
+      // Delete all subcollections owned by this user.
+      // We use individual batches per subcollection because a single batch is
+      // capped at 500 operations and scan history can grow large.
+      const subcollections = [
+        "scanHistory",
+        "familyProfiles",
+        "savedRecipes",
+        "settings",
+      ];
+
+      for (const sub of subcollections) {
+        const snapshot = await adminDb
+          .collection(`users/${uid}/${sub}`)
+          .get();
+        if (!snapshot.empty) {
+          const batch = adminDb.batch();
+          snapshot.docs.forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+        }
+      }
+
+      // Delete the top-level user document.
+      await adminDb.doc(`users/${uid}`).delete();
+
+      // Delete the Firebase Auth account. This must happen last so the Admin
+      // SDK's own token verification still works for the steps above.
+      await adminApp.auth().deleteUser(uid);
+
+      res.json({ ok: true });
+    } catch (error: any) {
+      console.error("Error deleting account:", { uid, error });
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

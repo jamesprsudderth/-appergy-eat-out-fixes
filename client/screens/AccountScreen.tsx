@@ -21,6 +21,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { AppColors } from "@/constants/colors";
 import { AccountStackParamList } from "@/navigation/AccountStackNavigator";
 import { useAuth } from "@/contexts/AuthContext";
+import { authFetch } from "@/services/apiClient";
 import { db, isFirebaseConfigured } from "@/services/firebase";
 import { exportProfileAsPDF } from "@/services/profileExport";
 import type { ProfileInfo } from "../../shared/types";
@@ -247,6 +248,57 @@ export default function AccountScreen() {
         },
       },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account and all data — allergies, family profiles, scan history, and saved recipes. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: () => {
+            // Second confirmation to prevent accidental taps
+            Alert.alert(
+              "Are you absolutely sure?",
+              "Your account and all associated data will be permanently deleted.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, Delete Everything",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      Haptics.notificationAsync(
+                        Haptics.NotificationFeedbackType.Warning
+                      );
+                      const response = await authFetch("/api/account", {
+                        method: "DELETE",
+                      });
+                      if (!response.ok) {
+                        throw new Error("Server returned an error");
+                      }
+                      // Auth state listener in AuthContext will fire and clear
+                      // local state automatically once the Firebase Auth account
+                      // is deleted server-side.
+                      await logout();
+                    } catch (error) {
+                      console.error("Account deletion failed:", error);
+                      Alert.alert(
+                        "Error",
+                        "Failed to delete account. Please try again or contact support."
+                      );
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -541,6 +593,15 @@ export default function AccountScreen() {
           icon="log-out-outline"
           label="Sign Out"
           onPress={handleLogout}
+          destructive
+        />
+        <View
+          style={[styles.divider, { backgroundColor: AppColors.divider }]}
+        />
+        <SettingsItem
+          icon="person-remove-outline"
+          label="Delete Account"
+          onPress={handleDeleteAccount}
           destructive
         />
       </View>
